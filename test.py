@@ -20,4 +20,4 @@ facebook_id_from_name = "email"
 facebook_pw_from_name = "pass"
 facebook_login_btn_name = "login"
 
-print()
+print("test")
