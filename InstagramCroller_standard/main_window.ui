@@ -28,7 +28,7 @@
    <widget class="QLabel" name="id_label">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>40</x>
       <y>100</y>
       <width>71</width>
       <height>20</height>
@@ -36,8 +36,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -47,7 +49,7 @@
    <widget class="QLineEdit" name="input_id">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>140</x>
       <y>100</y>
       <width>161</width>
       <height>20</height>
@@ -55,15 +57,17 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
    </widget>
    <widget class="QLineEdit" name="input_pw">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>140</x>
       <y>140</y>
       <width>161</width>
       <height>20</height>
@@ -71,8 +75,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="focusPolicy">
@@ -87,14 +93,16 @@
      <rect>
       <x>10</x>
       <y>140</y>
-      <width>91</width>
+      <width>121</width>
       <height>20</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -104,7 +112,7 @@
    <widget class="QLabel" name="cycle_label">
     <property name="geometry">
      <rect>
-      <x>290</x>
+      <x>330</x>
       <y>140</y>
       <width>131</width>
       <height>20</height>
@@ -112,8 +120,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -123,7 +133,7 @@
    <widget class="QLabel" name="search_label">
     <property name="geometry">
      <rect>
-      <x>280</x>
+      <x>320</x>
       <y>100</y>
       <width>161</width>
       <height>20</height>
@@ -131,8 +141,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -142,7 +154,7 @@
    <widget class="QLineEdit" name="input_search">
     <property name="geometry">
      <rect>
-      <x>450</x>
+      <x>490</x>
       <y>100</y>
       <width>161</width>
       <height>20</height>
@@ -150,8 +162,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="focusPolicy">
@@ -164,7 +178,7 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>670</x>
       <y>100</y>
       <width>221</width>
       <height>21</height>
@@ -172,8 +186,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -191,8 +207,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>18</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -202,7 +220,7 @@
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>630</x>
+      <x>670</x>
       <y>140</y>
       <width>71</width>
       <height>21</height>
@@ -210,8 +228,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -229,8 +249,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>16</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -248,8 +270,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>16</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -267,8 +291,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -286,15 +312,17 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>12</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
    </widget>
    <widget class="QLineEdit" name="input_cnt">
     <property name="geometry">
      <rect>
-      <x>450</x>
+      <x>490</x>
       <y>140</y>
       <width>161</width>
       <height>20</height>
@@ -302,8 +330,10 @@
     </property>
     <property name="font">
      <font>
-      <family>HY견고딕</family>
+      <family>Y이드스트릿체 B</family>
       <pointsize>9</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="focusPolicy">

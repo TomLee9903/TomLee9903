@@ -54,9 +54,8 @@ class MyWindow(QMainWindow, form_class):
         except:
             self.count = 1
         
-        self.insta_df = pd.DataFrame("", index=np.arange(1, self.count + 1),
-                     columns=["account","date", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10" , "t11", "t12", "t13", "t14", "t15",
-                             "t16", "t17", "t18", "t19", "t20"])
+        self.insta_df = pd.DataFrame('', index=np.arange(1, self.count + 1),
+                     columns=['ID', 'Date', 'Comment', 'tag'])
         # try:
         #     self.delay = int(self.cycle_combo.currentText())
         # except:
@@ -66,7 +65,7 @@ class MyWindow(QMainWindow, form_class):
 
         self.OpenUrl()        
         self.LoginUrl(self.id, self.pw)
-        self.SearchTargetWord()
+        self.CrollData()
 
     def TextBrowser(self, print_str):
         now_time = datetime.datetime.now()
@@ -117,7 +116,7 @@ class MyWindow(QMainWindow, form_class):
 
         self.TextBrowser('인스타그램 log-in 완료')
 
-    def SearchTargetWord(self):
+    def CrollData(self):
         act = ActionChains(self.driver)
         url = "https://www.instagram.com/explore/tags/{}/".format(self.target_word)
         self.driver.get(url)
@@ -129,46 +128,97 @@ class MyWindow(QMainWindow, form_class):
             self.driver.quit()
 
         time.sleep(5)
-        self.driver.find_element_by_css_selector('div.v1Nh3.kIKUG._bz0w').click()
+        self.driver.find_element_by_css_selector('div.eLAPa').click()
         
         # 데이터 기록, 다음 게시물로 클릭
         for i in range(self.count):
             # account 데이터 기록
             if i == 0:
                 time.sleep(self.process_delay)
-            account_data = self.driver.find_element_by_css_selector('a.sqdOP.yWX7d._8A5w5.ZIAjV').text
+#            account_data = self.driver.find_element_by_css_selector('a.sqdOP.yWX7d._8A5w5.ZIAjV').text
             
-            # 날짜 기록 (주단위)
-            time_raw = self.driver.find_element_by_css_selector('time.FH9sR.RhOlS')
-            time_info = time_raw.get_attribute('datetime')
 
             # 해쉬태그 데이터 기록
-            data = self.driver.find_element_by_css_selector('.C7I1f.X7jCj')
-            tag_raw = data.text
-            tag = re.findall('#[A-Za-z0-9가-힣]+', tag_raw)
-            tag = ''.join(tag).replace("#"," ") # "#" 제거
-            tag_data = tag.split()
+            data = self.driver.find_element_by_css_selector('.C7I1f.X7jCj').text
+            tag = re.findall('#[A-Za-z0-9가-힣]+', data)
+            tag = ' '.join(tag)
 
-            self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]/button').click()
-            self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div').click()
-            time.sleep(self.process_delay)
+            like_btn = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]/button') 
+            btn_svg = like_btn.find_element_by_tag_name('svg') 
+            svg_txt = btn_svg.get_attribute('aria-label')
+            if svg_txt == '좋아요':
+                like_btn.click()
 
-            self.driver.find_element_by_xpath('/html/body/div[6]/div[2]/div/div/button').click()
-            print('{}, {}번째 게시물 탐색 완료'.format(time.strftime('%c', time.localtime(time.time())), i+1))
-            print(account_data)
-            print(time_info)
-                
-            # dataframe에 계정정보, 날짜 저장
-            self.insta_df.iloc[i, 0] = account_data
-            self.insta_df.iloc[i, 1] = time_info
+            follow_btn = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')
+            follow_text = follow_btn.text
+            if follow_text == '팔로우':
+                follow_btn.click()
             
-            # 해시태그저장, 20개가 넘으면 20개까지만 저장됨
-            for j in range(20):
+            # # 글쓴이 comment 수집
+            # raw_info = self.driver.find_element_by_css_selector('div.C4VMK').text.split()
+            # text = []
+            # for i in range(len(raw_info)):
+            #     ## 첫번째 text는 아이디니까 제외 
+            #     if i == 0:
+            #         pass
+            #     ## 두번째부터 시작 
+            #     else:
+            #         if '#' in raw_info[i]:
+            #             pass
+            #         else:
+            #             text.append(raw_info[i])
+            # clean_text = ' '.join(text)
+            # time.sleep(self.process_delay)
+            
+            button = ''
+            # 댓글 더보기 버튼 누르기
+            while True:
                 try:
-                    self.insta_df.iloc[i,j+2] = tag_data[j]
-                except :
-                    break
-            time.sleep(self.process_delay)
+                    button = self.driver.find_element_by_css_selector('body > div._2dDPU.CkGkG > div.zZYga > div > article > div.eo2As > div.EtaWk > ul > li > div > button > span')
+                except:
+                    pass
+
+                if button is not None:
+                    try:
+                        self.driver.find_element_by_css_selector('body > div._2dDPU.CkGkG > div.zZYga > div > article > div.eo2As > div.EtaWk > ul > li > div > button > span').click()
+                    except:
+                        break
+
+            # 대댓글 버튼 누르기
+            buttons = self.driver.find_elements_by_css_selector('li > ul > li > div > button')
+
+            for button in buttons:
+                button.send_keys(Keys.ENTER)
+
+            # 댓글 내용 추출
+            id_f = []
+            rp_f = []
+
+            ids  = self.driver.find_elements_by_css_selector('div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.ItkAi')
+            replies = self.driver.find_elements_by_css_selector('div.C7I1f > div.C4VMK > div.MOdxS > span._7UhW9.xLCgt.MMzan.KV-D4.se6yk.T0kll')
+            time_raw = self.driver.find_element_by_css_selector('div.C4VMK > div.qF0y9 > div._7UhW9 > a > time')
+#            time_info = time_raw.get_attribute('datetime')
+
+            for id, reply in zip(ids, replies):
+                id_a = id.text.strip()
+                id_f.append(id_a)
+
+                rp_a = reply.text.strip()
+                rp_f.append(rp_a)
+
+                # data = {"아이디": id_f,
+                #         "코멘트": rp_f}
+            
+            self.insta_df.iloc[i, 0] = id_f
+            self.insta_df.iloc[i, 1] = time_info
+            self.insta_df.iloc[i, 2] = rp_f
+
+            print('{}, {}번째 게시물 탐색 완료'.format(time.strftime('%c', time.localtime(time.time())), i+1))
+               
+            # dataframe에 계정정보, 날짜 저장
+
+                        
+            self.driver.find_element_by_css_selector('div.l8mY4.feth3').click()
             if i == (self.count - 1):
                 self.driver.find_element_by_xpath('/html/body/div[6]/div[1]/button').click()
             
