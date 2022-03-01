@@ -62,42 +62,42 @@ class MyWindow(QMainWindow, form_class):
             QCloseEvent.ignore()
         
     def ButtonFunction(self):
-        if self.cnt == 0:
-            self.textBrowser.setPlainText('----------Start----------')
+#        if self.cnt == 0:
+#            self.textBrowser.setPlainText('----------Start----------')
+        self.text.run('--Start work--')
         try:
             self.id = self.input_id.text()
         except:
             self.id = ''
-            self.textBrowser.append('아이디를 입력해주세요!')
+#            self.textBrowser.append('아이디를 입력해주세요!')
             return
         try:
             self.pw = self.input_pw.text()
         except:
             self.pw == ''
-            self.textBrowser.append('패스워드를 입력해주세요!')
+#            self.textBrowser.append('패스워드를 입력해주세요!')
             return
         try:
             self.target_word = self.input_search.text()
         except:
             self.target_word == ''
-            self.textBrowser.append('검색어(해시태그)를 입력해주세요!')
+#            self.textBrowser.append('검색어(해시태그)를 입력해주세요!')
             return
         try:
             self.count = int(self.input_cnt.text())
         except:
             self.count = 1
         
-        # try:
-        #     self.delay = int(self.cycle_combo.currentText())
-        # except:
-        #     self.delay = 3
-        
+        if self.count > 800:
+            self.count = 800
+
         self.cnt += 1
 
         self.OpenUrl()
         self.LoginUrl(self.id, self.pw)
         self.CrawlData()
-    
+        self.cnt = 0
+
     @pyqtSlot()
     def OpenUrl(self):
         self.options = webdriver.ChromeOptions()
@@ -105,7 +105,7 @@ class MyWindow(QMainWindow, form_class):
         self.driver = webdriver.Chrome("./driver/chromedriver.exe", options=self.options);
         self.driver.maximize_window()
         self.driver.get('https://instagram.com')
-        self.text.run('인스타그램 URL open 완료')
+#        self.text.run('인스타그램 URL open 완료')
 
         time.sleep(self.process_delay)
 
@@ -119,7 +119,7 @@ class MyWindow(QMainWindow, form_class):
             username_box_check = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, 'react-root')))
             print(username_box_check)
         except:
-            self.text.run('인스타그램 log-in 오류 -> 타임 아웃1')
+#            self.text.run('인스타그램 log-in 오류 -> 타임 아웃1')
             self.driver.quit()
         time.sleep(self.process_delay)
 
@@ -129,7 +129,7 @@ class MyWindow(QMainWindow, form_class):
             username_box_check = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, 'react-root')))
             print(username_box_check)
         except:
-            self.text.run('인스타그램 log-in 오류 -> 타임 아웃2')
+#            self.text.run('인스타그램 log-in 오류 -> 타임 아웃2')
             self.driver.quit()
         
         time.sleep(1.5)
@@ -139,10 +139,10 @@ class MyWindow(QMainWindow, form_class):
             username_box_check = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, 'react-root')))
             print(username_box_check)
         except:
-            self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
+#            self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
             self.driver.quit()
 
-        self.text.run('인스타그램 log-in 완료')
+#        self.text.run('인스타그램 log-in 완료')
 
     def CrawlData(self):
         idx = 0
@@ -154,7 +154,7 @@ class MyWindow(QMainWindow, form_class):
             wait = WebDriverWait(self.driver, 20)
             element = wait.until(EC.presence_of_element_located((By.ID, 'react-root')))
         except:
-            self.text.run("크롤링이 비정상적으로 종료되었습니다")
+#            self.text.run("크롤링이 비정상적으로 종료되었습니다")
             self.driver.quit()
 
         time.sleep(self.process_delay)
@@ -237,35 +237,36 @@ class MyWindow(QMainWindow, form_class):
                 self.driver.find_element_by_xpath('/html/body/div[6]/div[1]/button').click()
             
             time.sleep(1.5)
-            self.text.run('{}, {}번째 게시물 탐색 완료'.format(time.strftime('%c', time.localtime(time.time())), i+1))
+#            self.text.run('{}, {}번째 게시물 탐색 완료'.format(time.strftime('%c', time.localtime(time.time())), i+1))
             idx = 0
-        
-        list_size = []
-        for j in range(len(final_res)):
-            list_size.append(len(final_res[j]))
+        # Deleux 버전        
+        # list_size = []
+        # for j in range(len(final_res)):
+        #     list_size.append(len(final_res[j]))
 
-        total_list_size = sum(list_size)
-        final_tmp = [['', '']] * int(total_list_size / 2)
-        final_tmp = pd.DataFrame(final_tmp, columns=['ID', 'Reply'])
-        df_idx = 0
-        for ii in range(len(final_res)):
-            size = int(len(final_res[ii]) / 2)
-            for n in range(size):
-                if n == 0:
-                    final_tmp.iloc[df_idx][0] = final_res[ii][0]       # odd
-                    final_tmp.iloc[df_idx][1] = final_res[ii][1]       # even
-                else:
-                    final_tmp.iloc[df_idx][0] = final_res[ii][n*2]         # even
-                    final_tmp.iloc[df_idx][1] = final_res[ii][n*2+1]       # odd
-                df_idx += 1
+        # total_list_size = sum(list_size)
+        # final_tmp = [['', '']] * int(total_list_size / 2)
+        # final_tmp = pd.DataFrame(final_tmp, columns=['ID', 'Reply'])
+        # df_idx = 0
+        # for ii in range(len(final_res)):
+        #     size = int(len(final_res[ii]) / 2)
+        #     for n in range(size):
+        #         if n == 0:
+        #             final_tmp.iloc[df_idx][0] = final_res[ii][0]       # odd
+        #             final_tmp.iloc[df_idx][1] = final_res[ii][1]       # even
+        #         else:
+        #             final_tmp.iloc[df_idx][0] = final_res[ii][n*2]         # even
+        #             final_tmp.iloc[df_idx][1] = final_res[ii][n*2+1]       # odd
+        #         df_idx += 1
         
-        df_idx = 0
-        current_path = os.getcwd()
-        now_time = datetime.datetime.now()
-        now_date = now_time.strftime('%Y-%m-%d-%H%M') + '_'
-        # 결과값 저장
-        final_tmp.to_excel("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx")
+        # df_idx = 0
+        # current_path = os.getcwd()
+        # now_time = datetime.datetime.now()
+        # now_date = now_time.strftime('%Y-%m-%d-%H%M') + '_'
+        # # 결과값 저장
+        # final_tmp.to_excel("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx")
         # 크롬드라이버 종료
+        self.text.run('--End work--')
         self.driver.quit()    
     
     @pyqtSlot(str)
