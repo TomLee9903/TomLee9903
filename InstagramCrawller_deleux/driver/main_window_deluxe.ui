@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>691</width>
-    <height>496</height>
+    <height>380</height>
    </rect>
   </property>
   <property name="font">
@@ -17,7 +17,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>Instagram Automative Tool</string>
+   <string>Instagram AI Bot</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -56,8 +56,8 @@
       </item>
       <item row="0" column="1">
        <layout class="QGridLayout" name="gridLayout">
-        <item row="2" column="0">
-         <widget class="QLabel" name="pw_label">
+        <item row="1" column="0">
+         <widget class="QLabel" name="id_label">
           <property name="font">
            <font>
             <family>휴먼옛체</family>
@@ -67,12 +67,24 @@
            </font>
           </property>
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Password&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;ID&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="cycle_label">
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;댓글&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1" colspan="2">
+         <widget class="QLineEdit" name="input_cnt">
           <property name="font">
            <font>
             <family>휴먼옛체</family>
@@ -81,35 +93,11 @@
             <bold>false</bold>
            </font>
           </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;크롤링 갯수&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
           </property>
-         </widget>
-        </item>
-        <item row="9" column="0" colspan="4">
-         <widget class="QTextBrowser" name="textBrowser">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>12</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="3">
-         <widget class="QLabel" name="label">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>9</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>ex) 망원맛집, 파스타 맛집</string>
+          <property name="echoMode">
+           <enum>QLineEdit::Normal</enum>
           </property>
          </widget>
         </item>
@@ -128,8 +116,8 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="1" colspan="3">
-         <widget class="QLineEdit" name="input_id">
+        <item row="5" column="0">
+         <widget class="QLabel" name="cycle_label">
           <property name="font">
            <font>
             <family>휴먼옛체</family>
@@ -138,28 +126,13 @@
             <bold>false</bold>
            </font>
           </property>
-         </widget>
-        </item>
-        <item row="3" column="1" colspan="2">
-         <widget class="QLineEdit" name="input_search">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>12</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
-          </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Normal</enum>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;좋아요/팔로우 횟수&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
         <item row="4" column="3">
-         <widget class="QLabel" name="label_3">
+         <widget class="QLabel" name="label">
           <property name="font">
            <font>
             <family>휴먼옛체</family>
@@ -169,85 +142,7 @@
            </font>
           </property>
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;ex) 700&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="search_label">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>12</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;검색어(해시태그, 단어)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="1" colspan="2">
-         <widget class="QLineEdit" name="input_cnt">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>12</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
-          </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Normal</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="id_label">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>12</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;ID&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="4">
-         <widget class="QLabel" name="label_2">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>18</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;인스타그램 좋아요/팔로우 자동화 프로그램&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="1" colspan="2">
-         <widget class="QLabel" name="label_4">
-          <property name="font">
-           <font>
-            <family>휴먼옛체</family>
-            <pointsize>16</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;작업 현황&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>ex) 드링콩제주, 파스타 맛집</string>
           </property>
          </widget>
         </item>
@@ -269,7 +164,97 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="1" colspan="2">
+        <item row="4" column="1" colspan="2">
+         <widget class="QLineEdit" name="input_search">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>12</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
+          <property name="echoMode">
+           <enum>QLineEdit::Normal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="pw_label">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>12</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Password&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="3">
+         <widget class="QLineEdit" name="input_id">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>12</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="3">
+         <widget class="QLabel" name="label_3">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>9</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;ex) 10, 235 등. 800이 최대&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="4">
+         <widget class="QLabel" name="label_2">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>18</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;인스타그램 좋아요/팔로우 봇&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="search_label">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>12</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;검색어(해시태그, 단어)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
          <widget class="QPushButton" name="start_btn">
           <property name="font">
            <font>
@@ -281,6 +266,40 @@
           </property>
           <property name="text">
            <string>Start!</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1" colspan="3">
+         <widget class="QTextBrowser" name="textBrowser">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+            <pointsize>12</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1" colspan="2">
+         <widget class="QLineEdit" name="input_comment">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="readOnly">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <widget class="QCheckBox" name="comment_check">
+          <property name="font">
+           <font>
+            <family>휴먼옛체</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>댓글 달기</string>
           </property>
          </widget>
         </item>
@@ -327,6 +346,7 @@
  <tabstops>
   <tabstop>input_id</tabstop>
   <tabstop>input_pw</tabstop>
+  <tabstop>input_comment</tabstop>
   <tabstop>input_search</tabstop>
   <tabstop>input_cnt</tabstop>
   <tabstop>start_btn</tabstop>
