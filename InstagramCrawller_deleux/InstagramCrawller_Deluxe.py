@@ -232,7 +232,7 @@ class MyWindow(QMainWindow, form_class):
                 self.driver.find_element_by_css_selector('div.l8mY4.feth3').click()
                 time.sleep(1.5)
                 self.text.run('광고성 게시물 skip'.format(i+1))
-                self.count += 1
+                i -= 1
                 continue
 
             if block_point == False :
@@ -294,7 +294,7 @@ class MyWindow(QMainWindow, form_class):
                     except:
                          pass
                 
-#                time.sleep(0.5)
+                time.sleep(1.5)
 
                 # 글쓴이 comment 수집
                 raw_info = self.driver.find_element_by_css_selector('div.C4VMK').text.split()
@@ -328,6 +328,9 @@ class MyWindow(QMainWindow, form_class):
                 final_res2.iloc[i][4] = self.like_cnt
                 final_res2.iloc[i][5] = self.current_link
                 
+                self.content = ''
+                self.tag = ''
+                self.like_cnt = 0
                 # button = ''
                 # # 댓글 더보기 버튼 누르기
                 # while True:
