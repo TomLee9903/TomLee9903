@@ -22,13 +22,12 @@ import time
 import datetime
 import os
 import re
-import pandas as pd
-import numpy as np
-import itertools
 import shutil
 import random
 import openpyxl
 from fake_useragent import UserAgent
+import schedule
+import threading
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_window_deluxe.ui")[0]
@@ -62,7 +61,12 @@ class MyWindow(QMainWindow, form_class):
         self.process_delay = 5
         self.text = TextBrowser()
         self.text.finished.connect(self.ConnectTextBrowser)
+        text_thread = threading.Thread(target=self.ConnectTextBrowser(''))
+        text_thread.start()
         self.comment_check.clicked.connect(self.ISCheckComment)
+        self.re_login = False
+        alarm_thread = threading.Thread(target=self.schedule_alarm)
+        alarm_thread.start()
 
     def closeEvent(self, QCloseEvent):
         ans = QMessageBox.question(self, "종료 확인", "종료하시겠습니까?",
@@ -115,7 +119,8 @@ class MyWindow(QMainWindow, form_class):
 
         self.like_cnt = 0
 
-        self.OpenUrl()
+        if self.re_login == False:
+            self.OpenUrl()
         self.LoginUrl(self.id, self.pw)
         self.CrawlData()
     
@@ -131,7 +136,6 @@ class MyWindow(QMainWindow, form_class):
         except:
             subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
     
-
         self.option = webdriver.ChromeOptions()
         self.option.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
         
@@ -166,7 +170,6 @@ class MyWindow(QMainWindow, form_class):
         self.option.add_argument(f'user-agent={self.userAgent}')
         self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", { "source": """ Object.defineProperty(navigator, 'webdriver', { get: () => undefined }) """ })
 
-        self.driver.implicitly_wait(10)
         self.driver.maximize_window()
         self.driver.get('https://instagram.com')
         self.text.run('인스타그램 URL open 완료')
@@ -241,7 +244,7 @@ class MyWindow(QMainWindow, form_class):
             self.text.run("크롤링이 비정상적으로 종료되었습니다")
             self.driver.quit()
         
-        time.sleep(10)
+        time.sleep(5)
     
         try:
             wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.eLAPa')))
@@ -279,6 +282,7 @@ class MyWindow(QMainWindow, form_class):
                                     element = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[1]')
                                 except:
                                     self.text.run("Cannot found the comments")
+                                    self.re_login = True
                                     break
 
             is_skip = False
@@ -331,7 +335,8 @@ class MyWindow(QMainWindow, form_class):
                                 element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/span/div')))                               
                             except:
                                 self.text.run("크롤링이 비정상적으로 종료되었습니다")
-                                self.driver.quit()                
+                                self.re_login = True
+                                break
                 
                 like_text = element.text
 
@@ -349,6 +354,7 @@ class MyWindow(QMainWindow, form_class):
                 element = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[2]/div/a/div/time')))
             except:
                 self.text.run("크롤링이 비정상적으로 종료되었습니다")
+                self.re_login = True
                 break
 
             self.date = element.accessible_name
@@ -397,6 +403,7 @@ class MyWindow(QMainWindow, form_class):
                         pass
                 
                 time.sleep(random.randrange(0, 100))
+
             if is_like == True and is_follow == True and is_reply == True:
                 element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
                 next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
@@ -435,22 +442,23 @@ class MyWindow(QMainWindow, form_class):
             sheet.append([self.now, self.content_id, self.date, self.content, self.tag, self.like_cnt, self.current_link])
 
             wb.save("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx")
-            i += 1
             
-            self.text.run('{}번째 게시물 탐색 완료'.format(i))
-            print('{}{}번째 게시물 탐색 완료'.format(now, i))
-            if i % 40 == 0 and i != 0:
+            self.text.run('{}번째 게시물 탐색 완료'.format(i + 1))
+            print('{}{}번째 게시물 탐색 완료'.format(now, i + 1))
+            if i == (self.count - 1):
+                self.text.run('마지막 게시물입니다.')
+                break
+            else:
+                i += 1
+
+            if i % 40 == 0 and i != 0 and i != self.count:
                 self.userAgent = self.ua.random
                 self.option.add_argument(f'user-agent={self.userAgent}')
                 time.sleep(random.randrange(300, 1800))
-
-            try:
-                element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
-                next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
-                self.act.click(next_btn).perform()
-            except:
-                self.text.run('마지막 게시물입니다.')
-                break
+            
+            element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
+            next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
+            self.act.click(next_btn).perform()
                 # button = ''
                 # # 댓글 더보기 버튼 누르기
                 # while True:
@@ -488,14 +496,25 @@ class MyWindow(QMainWindow, form_class):
         diff_time = self.end_time - self.start_time
         self.text.run('--End work--')
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-        self.driver.quit()
-    
+        self.driver.get('https://www.instagram.com')
+        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > span > img'))).click()
+        time.sleep(2)
+        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6) > div'))).click()
+        self.re_login = True
+        
+    def schedule_alarm(self):
+        schedule.every(10).minutes.do(self.ButtonFunction)
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
     @pyqtSlot(str)
     def ConnectTextBrowser(self, print_str):
         self.textBrowser.append(print_str)
         self.textBrowser.repaint()
 
-if __name__ == "__main__":
+if __name__ == "__main__":  
     app = QApplication(sys.argv)
     window = MyWindow()
     window.show()
