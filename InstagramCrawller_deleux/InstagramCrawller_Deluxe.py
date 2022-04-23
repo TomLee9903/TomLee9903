@@ -26,7 +26,6 @@ import shutil
 import random
 import openpyxl
 from fake_useragent import UserAgent
-import schedule
 import threading
 
 # QT designer ui 파일 로드
@@ -34,8 +33,12 @@ form_class = uic.loadUiType("./driver/main_window_deluxe.ui")[0]
 
 # UI 텍스트 출력 클래스
 class TextBrowser(QThread):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.now_date = ''
+        
     finished = pyqtSignal(str)
-    now_date = ''
 
     @pyqtSlot(str)
     def run(self, print_str):
@@ -57,34 +60,46 @@ class MyWindow(QMainWindow, form_class):
         self.setupUi(self)
         self.cnt = 0
         self.setWindowIcon(QIcon('./driver/instagram_img.png'))
-        self.start_btn.clicked.connect(self.ButtonFunction)
+        self.start_btn.clicked.connect(self.MakeThread)
         self.process_delay = 5
-        self.text = TextBrowser()
-        self.text.finished.connect(self.ConnectTextBrowser)
-        text_thread = threading.Thread(target=self.ConnectTextBrowser(''))
-        text_thread.start()
+        self.re_login = True
+        self.open_url = True
+        self.is_checked = False
         self.comment_check.clicked.connect(self.ISCheckComment)
-        self.re_login = False
-        alarm_thread = threading.Thread(target=self.schedule_alarm)
-        alarm_thread.start()
+        self.relogin_checkBox.clicked.connect(self.ISCheckReLogin)
 
     def closeEvent(self, QCloseEvent):
         ans = QMessageBox.question(self, "종료 확인", "종료하시겠습니까?",
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if ans == QMessageBox.Yes:
             QCloseEvent.accept()
+            self.KillThread()
         else:
             QCloseEvent.ignore()
     
     def ISCheckComment(self):
-        is_checked = self.comment_check.isChecked()
-        if is_checked == False:
+        self.is_checked = self.comment_check.isChecked()
+        if self.is_checked == False:
             self.input_comment.setEnabled(False)
-        elif is_checked == True:
+        elif self.is_checked == True:
             self.input_comment.setEnabled(True)
-            
+
+    def ISCheckReLogin(self):
+        is_checked_relogin = self.relogin_checkBox.isChecked()
+        if is_checked_relogin == False:
+            self.re_login = False
+            self.relogin_time.setEnabled(False)
+        elif is_checked_relogin == True:
+            self.re_login = True
+            self.relogin_time.setEnabled(True)
+
     def ButtonFunction(self):
+        self.text = TextBrowser(self)
+        self.text.finished.connect(self.ConnectTextBrowser)
+#        self.text.run('')
+        
         self.text.run('--Start work--')
+        
         self.start_time = self.text.GetTime()
         try:
             self.id = self.input_id.text()
@@ -118,8 +133,12 @@ class MyWindow(QMainWindow, form_class):
             self.comment = ''
 
         self.like_cnt = 0
+        try:
+            self.relogin_min = int(self.relogin_time.text()) * 60
+        except:
+            self.relogin_min = 600
 
-        if self.re_login == False:
+        if self.open_url == True:
             self.OpenUrl()
         self.LoginUrl(self.id, self.pw)
         self.CrawlData()
@@ -172,6 +191,7 @@ class MyWindow(QMainWindow, form_class):
 
         self.driver.maximize_window()
         self.driver.get('https://instagram.com')
+        self.text.run('Chrome 버전 : {}'.format(chrome_ver))
         self.text.run('인스타그램 URL open 완료')
 
         time.sleep(self.process_delay)
@@ -187,32 +207,29 @@ class MyWindow(QMainWindow, form_class):
             self.main_dis = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > section')))
             print(self.main_dis)
         try:
-            username_box_check = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.ID, 'react-root')))
+            second_security = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div:nth-child(1)')))
+            if '코드를 입력하세요' in second_security.text:
+                self.text.run('보안 코드를 입력해주세요.')
+        except:
+            pass
+        try:
+            username_box_check = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div > div > button')))
             print(username_box_check)
         except:
-            self.text.run('인스타그램 log-in 오류 -> 타임 아웃1')
-            self.driver.quit()
+#            self.text.run('인스타그램 log-in 오류 -> 타임 아웃1')
+#            return 0
+            pass
+        username_box_check.click()
         time.sleep(self.process_delay)
         try:
-            self.save_login_info_button = self.driver.find_element_by_css_selector('#react-root > section > main > div > div > div > div > button');
-            self.act.click(self.save_login_info_button).perform()
+            self.save_login_info_button = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm')))
+            self.save_login_info_button.click()
+#            self.act.click(self.save_login_info_button).perform()
         except:
             pass
-        try:
-            username_box_check = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.ID, 'react-root')))
-            print(username_box_check)
-        except:
-            self.text.run('인스타그램 log-in 오류 -> 타임 아웃2')
-            self.driver.quit()
 
-        time.sleep(1.5)
         try:
-            self.set_alarm = self.driver.find_element_by_css_selector('body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm');
-            self.act.click(self.set_alarm).perform()
-        except:
-            pass
-        try:
-            username_box_check = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.ID, 'react-root')))
+            username_box_check = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.ID, 'react-root')))
             print(username_box_check)
         except:
             self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
@@ -221,7 +238,7 @@ class MyWindow(QMainWindow, form_class):
             self.nickname = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > span > img')))\
                                                         .accessible_name.split('님의')[0]
         except:
-            self.text.run('인스타그램 log-in 오류 -> 타임 아웃4')
+            self.text.run('회원님의 Nickname을 가져오는데 실패했습니다.')
             self.driver.quit()
 
         self.text.run('인스타그램 log-in 완료')
@@ -283,6 +300,7 @@ class MyWindow(QMainWindow, form_class):
                                 except:
                                     self.text.run("Cannot found the comments")
                                     self.re_login = True
+                                    self.open_url = False
                                     break
 
             is_skip = False
@@ -319,7 +337,7 @@ class MyWindow(QMainWindow, form_class):
                 else:
                     is_like = True
                 try:
-                    wait = WebDriverWait(self.driver, 10)
+                    wait = WebDriverWait(self.driver, 5)
                     element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div/a/div')))
                 except:
                     try:
@@ -336,6 +354,7 @@ class MyWindow(QMainWindow, form_class):
                             except:
                                 self.text.run("크롤링이 비정상적으로 종료되었습니다")
                                 self.re_login = True
+                                self.open_url = False
                                 break
                 
                 like_text = element.text
@@ -355,25 +374,29 @@ class MyWindow(QMainWindow, form_class):
             except:
                 self.text.run("크롤링이 비정상적으로 종료되었습니다")
                 self.re_login = True
+                self.open_url = False
                 break
 
             self.date = element.accessible_name
             self.current_link = self.driver.current_url
 
-            follow_btn = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')
-            follow_text = follow_btn.text
-            if follow_text == '팔로우':
-                follow_btn.click()
-            else:
-                is_follow = True
-
+            try:
+                follow_btn = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')))
+                follow_text = follow_btn.text
+                if follow_text == '팔로우':
+                    follow_btn.click()
+                else:
+                    is_follow = True
+            except:
+                pass
+            
             button = ''
             # 댓글 더보기 버튼 누르기
             try:
                 while True:
                     try:
-                        button = self.driver.find_element_by_css_selector('article > div > div.HP0qD > div > div > div.eo2As > div.EtaWk > ul > li > div > button > div > svg').click()
-                    except:                                                 
+                        button = self.driver.find_element_by_css_selector('body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > div.EtaWk > ul > li > div > button > div > svg').click()
+                    except:                                                
                         break
 
                     if button is not None:
@@ -391,7 +414,7 @@ class MyWindow(QMainWindow, form_class):
                     is_reply = True
                     break
 
-            if is_reply == False:
+            if is_reply == False and self.is_checked == True:
                 ## 댓글 달기
                 try:
                     comment_block = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[3]/div/form/textarea')
@@ -402,9 +425,7 @@ class MyWindow(QMainWindow, form_class):
                     except:
                         pass
                 
-                time.sleep(random.randrange(0, 100))
-
-            if is_like == True and is_follow == True and is_reply == True:
+            if is_like == True and is_follow == True and (is_reply == True or self.is_checked == False):
                 element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
                 next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
                 self.act.click(next_btn).perform()
@@ -442,6 +463,7 @@ class MyWindow(QMainWindow, form_class):
             sheet.append([self.now, self.content_id, self.date, self.content, self.tag, self.like_cnt, self.current_link])
 
             wb.save("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx")
+            time.sleep(random.randrange(10, 100))
             
             self.text.run('{}번째 게시물 탐색 완료'.format(i + 1))
             print('{}{}번째 게시물 탐색 완료'.format(now, i + 1))
@@ -454,7 +476,7 @@ class MyWindow(QMainWindow, form_class):
             if i % 40 == 0 and i != 0 and i != self.count:
                 self.userAgent = self.ua.random
                 self.option.add_argument(f'user-agent={self.userAgent}')
-                time.sleep(random.randrange(300, 1800))
+                time.sleep(random.randrange(300, 600))
             
             element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
             next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
@@ -496,18 +518,27 @@ class MyWindow(QMainWindow, form_class):
         diff_time = self.end_time - self.start_time
         self.text.run('--End work--')
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+        self.text.run('')
         self.driver.get('https://www.instagram.com')
         WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > span > img'))).click()
         time.sleep(2)
         WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6) > div'))).click()
-        self.re_login = True
-        
-    def schedule_alarm(self):
-        schedule.every(10).minutes.do(self.ButtonFunction)
 
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        if self.re_login == True:
+            self.open_url = False
+            self.Restart()
+
+    def Restart(self):
+        time.sleep(self.relogin_min)
+        self.ButtonFunction()
+
+    def MakeThread(self):
+        self.th = threading.Thread(target=self.ButtonFunction)
+        self.th.start()
+
+    def KillThread(self):
+        pid = os.getpid()
+        os.kill(pid, 2)
 
     @pyqtSlot(str)
     def ConnectTextBrowser(self, print_str):
