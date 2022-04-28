@@ -1,4 +1,5 @@
 from argparse import Action
+from faulthandler import disable
 import sys
 from typing import Text
 from PyQt5.QtWidgets import *
@@ -65,8 +66,10 @@ class MyWindow(QMainWindow, form_class):
         self.re_login = True
         self.open_url = True
         self.is_checked = False
-        self.comment_check.clicked.connect(self.ISCheckComment)
-        self.relogin_checkBox.clicked.connect(self.ISCheckReLogin)
+        self.disable_follow = False
+        self.comment_check.clicked.connect(self.IsCheckComment)
+        self.relogin_checkBox.clicked.connect(self.IsCheckReLogin)
+        self.disable_follow_check.clicked.connect(self.IsCheckDisableFollow)
 
     def closeEvent(self, QCloseEvent):
         ans = QMessageBox.question(self, "종료 확인", "종료하시겠습니까?",
@@ -77,14 +80,21 @@ class MyWindow(QMainWindow, form_class):
         else:
             QCloseEvent.ignore()
     
-    def ISCheckComment(self):
+    def IsCheckComment(self):
         self.is_checked = self.comment_check.isChecked()
         if self.is_checked == False:
             self.input_comment.setEnabled(False)
         elif self.is_checked == True:
             self.input_comment.setEnabled(True)
 
-    def ISCheckReLogin(self):
+    def IsCheckDisableFollow(self):
+        disable_follow_chk = self.disable_follow_check.isChecked()
+        if disable_follow_chk == False:
+            self.disable_follow = False
+        elif disable_follow_chk == True:
+            self.disable_follow = True
+
+    def IsCheckReLogin(self):
         is_checked_relogin = self.relogin_checkBox.isChecked()
         if is_checked_relogin == False:
             self.re_login = False
@@ -235,7 +245,7 @@ class MyWindow(QMainWindow, form_class):
             self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
             self.driver.quit()
         try:
-            self.nickname = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > span > img')))\
+            self.nickname = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img')))\
                                                         .accessible_name.split('님의')[0]
         except:
             self.text.run('회원님의 Nickname을 가져오는데 실패했습니다.')
@@ -262,7 +272,7 @@ class MyWindow(QMainWindow, form_class):
             self.driver.quit()
         
         time.sleep(5)
-    
+        self.text.run("{} 해시태그 최근 게시물 searching 시작!".format(self.target_word))
         try:
             wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.eLAPa')))
 #            self.driver.find_element_by_css_selector('div.eLAPa').click()
@@ -324,11 +334,11 @@ class MyWindow(QMainWindow, form_class):
                 continue
 
             if block_point == False :
-                time.sleep(5)
+                time.sleep(2)
                 try:
-                    like_btn = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]')
+                    like_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > section.ltpMr.Slqrh > span.fr66n > button')))
                 except:
-                    like_btn = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]/button/div[2]/span/svg')
+                    like_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[5]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]/button')))
 
                 btn_svg = like_btn.find_element_by_tag_name('svg')
                 svg_txt = btn_svg.get_attribute('aria-label')
@@ -379,31 +389,30 @@ class MyWindow(QMainWindow, form_class):
 
             self.date = element.accessible_name
             self.current_link = self.driver.current_url
-
-            try:
-                follow_btn = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')))
-                follow_text = follow_btn.text
-                if follow_text == '팔로우':
-                    follow_btn.click()
-                else:
-                    is_follow = True
-            except:
-                pass
             
+            if self.disable_follow == False:
+                try:
+                    follow_btn = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')))
+                    follow_text = follow_btn.text
+                    if follow_text == '팔로우':
+                        follow_btn.click()
+                    else:
+                        is_follow = True
+                except:
+                    pass
+
             button = ''
             # 댓글 더보기 버튼 누르기
             try:
+                cnt = 0
                 while True:
                     try:
                         button = self.driver.find_element_by_css_selector('body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > div.EtaWk > ul > li > div > button > div > svg').click()
                     except:                                                
                         break
-
-                    if button is not None:
-                        try:
-                            self.driver.find_element_by_css_selector('body > div._2dDPU.CkGkG > div.zZYga > div > article > div.eo2As > div.EtaWk > ul > li > div > button > span').click()
-                        except:
-                            break
+                    if cnt == 50:
+                        break
+                    cnt += 1
             except:
                 pass
 
@@ -425,7 +434,7 @@ class MyWindow(QMainWindow, form_class):
                     except:
                         pass
                 
-            if is_like == True and is_follow == True and (is_reply == True or self.is_checked == False):
+            if is_like == True and (is_follow == True or self.disable_follow == True) and (is_reply == True or self.is_checked == False):
                 element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
                 next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
                 self.act.click(next_btn).perform()
@@ -520,9 +529,12 @@ class MyWindow(QMainWindow, form_class):
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
         self.text.run('')
         self.driver.get('https://www.instagram.com')
-        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > span > img'))).click()
+
+        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img'))).click()
         time.sleep(2)
-        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6) > div'))).click()
+        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6)'))).click()
+        # pid = self.driver.service.process.pid
+        # os.system("taskkill /f /im chromedriver.exe /t")
 
         if self.re_login == True:
             self.open_url = False
