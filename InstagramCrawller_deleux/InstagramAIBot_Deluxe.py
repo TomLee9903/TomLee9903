@@ -63,10 +63,13 @@ class MyWindow(QMainWindow, form_class):
         self.setWindowIcon(QIcon('./driver/instagram_img.png'))
         self.start_btn.clicked.connect(self.MakeThread)
         self.process_delay = 5
-        self.re_login = True
+        self.re_login = False
         self.open_url = True
         self.is_checked = False
         self.disable_follow = False
+        self.is_reply = False
+        self.is_like = False
+        self.is_follow = False
         self.comment_check.clicked.connect(self.IsCheckComment)
         self.relogin_checkBox.clicked.connect(self.IsCheckReLogin)
         self.disable_follow_check.clicked.connect(self.IsCheckDisableFollow)
@@ -249,7 +252,8 @@ class MyWindow(QMainWindow, form_class):
                                                         .accessible_name.split('님의')[0]
         except:
             self.text.run('회원님의 Nickname을 가져오는데 실패했습니다.')
-            self.driver.quit()
+#            self.driver.quit()
+            return 0
 
         self.text.run('인스타그램 log-in 완료')
 
@@ -309,13 +313,12 @@ class MyWindow(QMainWindow, form_class):
                                     element = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[1]')
                                 except:
                                     self.text.run("Cannot found the comments")
-                                    self.re_login = True
                                     self.open_url = False
                                     break
 
             is_skip = False
-            is_like = False
-            is_follow = False
+            self.is_like = False
+            self.is_follow = False
 
             # 게시물 글에서 광고성글 단어 포함 여부 확인하기
             for word in block_text_list :
@@ -335,110 +338,30 @@ class MyWindow(QMainWindow, form_class):
 
             if block_point == False :
                 time.sleep(2)
-                try:
-                    like_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > section.ltpMr.Slqrh > span.fr66n > button')))
-                except:
-                    like_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[5]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]/button')))
-
-                btn_svg = like_btn.find_element_by_tag_name('svg')
-                svg_txt = btn_svg.get_attribute('aria-label')
-                if svg_txt == '좋아요':
-                    like_btn.click()
-                else:
-                    is_like = True
-                try:
-                    wait = WebDriverWait(self.driver, 5)
-                    element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div/a/div')))
-                except:
-                    try:
-                        wait = WebDriverWait(self.driver, 0.5)
-                        element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div')))
-                    except:
-                        try:
-                            wait = WebDriverWait(self.driver, 0.5)
-                            element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div/a[2]/div')))
-                        except:
-                            try:
-                                wait = WebDriverWait(self.driver, 0.5)
-                                element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/span/div')))                               
-                            except:
-                                self.text.run("크롤링이 비정상적으로 종료되었습니다")
-                                self.re_login = True
-                                self.open_url = False
-                                break
-                
-                like_text = element.text
-
-            if '좋아요' in like_text:
-                if '가장 먼저' in like_text:
-                    self.like_cnt = 1
-                else:
-                    self.like_cnt = int(like_text.replace('좋아요 ','').replace('개','').replace(',',''))
-            elif '조회' in like_text:
-                self.like_cnt = int(like_text.replace('조회 ','').replace('회', '').replace(',',''))
-            else:
-                self.like_cnt = 0
-
+                # 좋아요 누르기
+                ret = self.ClickLikeButton()
+                if ret == 0:
+                    self.text.run("크롤링이 비정상적으로 종료되었습니다")
+                    self.open_url = False
+                    return 0
             try:
                 element = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[2]/div/a/div/time')))
             except:
                 self.text.run("크롤링이 비정상적으로 종료되었습니다")
-                self.re_login = True
                 self.open_url = False
                 break
 
             self.date = element.accessible_name
             self.current_link = self.driver.current_url
             
-            if self.disable_follow == False:
-                try:
-                    follow_btn = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')))
-                    follow_text = follow_btn.text
-                    if follow_text == '팔로우':
-                        follow_btn.click()
-                    else:
-                        is_follow = True
-                except:
-                    pass
+            # 팔로우 하기
+            self.ClickFollow()
 
-            button = ''
-            # 댓글 더보기 버튼 누르기
-            try:
-                cnt = 0
-                while True:
-                    try:
-                        button = self.driver.find_element_by_css_selector('body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > div.EtaWk > ul > li > div > button > div > svg').click()
-                    except:                                                
-                        break
-                    if cnt == 50:
-                        break
-                    cnt += 1
-            except:
-                pass
+            # 댓글달기
+            self.PutComment()
 
-            ids  = self.driver.find_elements_by_css_selector('div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.ItkAi')
-            is_reply = False
-            for id in ids:
-                if self.nickname in id.text:
-                    is_reply = True
-                    break
-
-            if is_reply == False and self.is_checked == True:
-                ## 댓글 달기
-                try:
-                    comment_block = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[3]/div/form/textarea')
-                    self.act.move_to_element(comment_block).click().pause(5).send_keys(self.comment).pause(5).send_keys(Keys.ENTER).perform()
-                except:
-                    try:
-                        comment_block = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[3]/div')
-                    except:
-                        pass
-                
-            if is_like == True and (is_follow == True or self.disable_follow == True) and (is_reply == True or self.is_checked == False):
-                element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
-                next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
-                self.act.click(next_btn).perform()
-                time.sleep(5)
+            if self.is_like == True and (self.is_follow == True or self.disable_follow == True) and (self.is_reply == True or self.is_checked == False):
+                self.ClickNextButton()
                 continue
 
             # 글쓴이 comment 수집
@@ -487,9 +410,7 @@ class MyWindow(QMainWindow, form_class):
                 self.option.add_argument(f'user-agent={self.userAgent}')
                 time.sleep(random.randrange(300, 600))
             
-            element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
-            next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
-            self.act.click(next_btn).perform()
+            self.ClickNextButton()
                 # button = ''
                 # # 댓글 더보기 버튼 누르기
                 # while True:
@@ -551,6 +472,102 @@ class MyWindow(QMainWindow, form_class):
     def KillThread(self):
         pid = os.getpid()
         os.kill(pid, 2)
+
+    def PutComment(self):
+        button = ''
+        # 댓글 더보기 버튼 누르기
+        try:
+            cnt = 0
+            while True:
+                try:
+                    button = self.driver.find_element_by_css_selector('body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > div.EtaWk > ul > li > div > button > div > svg').click()
+                except:                                                
+                    break
+                if cnt == 50:
+                    break
+                cnt += 1
+        except:
+            pass
+
+        ids  = self.driver.find_elements_by_css_selector('div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.ItkAi')
+        self.is_reply = False
+        for id in ids:
+            if self.nickname in id.text:
+                self.is_reply = True
+                break
+
+        if self.is_reply == False and self.is_checked == True:
+            ## 댓글 달기
+            try:
+                comment_block = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[3]/div/form/textarea')
+                self.act.move_to_element(comment_block).click().pause(5).send_keys(self.comment).pause(5).send_keys(Keys.ENTER).perform()
+            except:
+                try:
+                    comment_block = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[3]/div')
+                except:
+                    pass
+
+    def ClickFollow(self):
+        if self.disable_follow == False:
+            try:
+                follow_btn = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[1]/div/header/div[2]/div[1]/div[2]/button/div')))
+                follow_text = follow_btn.text
+                if follow_text == '팔로우':
+                    follow_btn.click()
+                else:
+                    self.is_follow = True
+            except:
+                pass
+    
+    def ClickLikeButton(self):
+        try:
+            like_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > section.ltpMr.Slqrh > span.fr66n > button')))
+        except:
+            like_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[5]/div[3]/div/article/div/div[2]/div/div/div[2]/section[1]/span[1]/button')))
+
+        btn_svg = like_btn.find_element_by_tag_name('svg')
+        svg_txt = btn_svg.get_attribute('aria-label')
+        if svg_txt == '좋아요':
+            like_btn.click()
+        else:
+            self.is_like = True
+        try:
+            wait = WebDriverWait(self.driver, 5)
+            element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div/a/div')))
+        except:
+            try:
+                wait = WebDriverWait(self.driver, 0.5)
+                element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div')))
+            except:
+                try:
+                    wait = WebDriverWait(self.driver, 0.5)
+                    element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/div/div/a[2]/div')))
+                except:
+                    try:
+                        wait = WebDriverWait(self.driver, 0.5)
+                        element = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/section[2]/div/span/div')))                               
+                    except:
+                        return 0
+                
+        like_text = element.text
+
+        if '좋아요' in like_text:
+            if '가장 먼저' in like_text:
+                self.like_cnt = 1
+            else:
+                self.like_cnt = int(like_text.replace('좋아요 ','').replace('개','').replace(',',''))
+        elif '조회' in like_text:
+            self.like_cnt = int(like_text.replace('조회 ','').replace('회', '').replace(',',''))
+        else:
+            self.like_cnt = 0
+        
+        return 1
+
+    def ClickNextButton(self):
+        element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
+        next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
+        self.act.click(next_btn).perform()
+        time.sleep(5)
 
     @pyqtSlot(str)
     def ConnectTextBrowser(self, print_str):
