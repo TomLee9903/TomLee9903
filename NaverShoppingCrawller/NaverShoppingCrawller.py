@@ -21,16 +21,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import chromedriver_autoinstaller
 import time
 import datetime
 import os
-import re
 import pandas as pd
-import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
+import threading
+import openpyxl
+import shutil
+import subprocess
 
 # UI 텍스트 출력 클래스
 class TextBrowser(QThread):
+    # signal을 MyWindow에 전달할 수 있게 하는 인자
     finished = pyqtSignal(str)
     now_date = ''
 
@@ -42,32 +46,41 @@ class TextBrowser(QThread):
     def make_log(self, print_str):
         self.now_time = datetime.datetime.now()
         self.now_date = self.now_time.strftime('[%Y-%m-%d %H:%M:%S]  ') + print_str
-        self.finished.emit(self.now_date)
+        self.finished.emit(self.now_date)   # signal MyWindow에 전달
 
     def GetTime(self):
         self.now_time = datetime.datetime.now()
         return self.now_time
 
+# UI 구성 클래스
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.cnt = 0
-        self.setWindowIcon(QIcon('./driver/naver-icon-style-1-300x300.png'))
-        self.run_btn.clicked.connect(self.Run)
+        self.setWindowIcon(QIcon('./driver/naver-icon-style-1-300x300.png'))    # UI에 Naver icon 설정
+        self.run_btn.clicked.connect(self.Run)  # 검색 버튼 누르면 self.Run 함수 실행
         self.process_delay = 3
-        self.text = TextBrowser()
-        self.text.finished.connect(self.ConnectTextBrowser)
-        self.exit_btn.clicked.connect(QCoreApplication.instance().quit)
+        self.text = TextBrowser()               # UI에 text 출력 위한 객체
+        self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
+        self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
 
-    def closeEvent(self, QCloseEvent):
+    # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
+    def closeEvent(self, QCloseEvent): 
         ans = QMessageBox.question(self, "종료 확인", "종료하시겠습니까?",
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if ans == QMessageBox.Yes:
             QCloseEvent.accept()
+            self.KillThread()
         else:
             QCloseEvent.ignore()
-
+    
+    # 종료 버튼 누르면 실행되는 함수
+    def QuitProgram(self):
+        QCoreApplication.instance().quit
+        self.KillThread()
+        
+    # GUI 디자인
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(449, 398)
@@ -130,47 +143,87 @@ class MyWindow(QMainWindow):
         self.run_btn.setText(_translate("MainWindow", "검색"))
         self.exit_btn.setText(_translate("MainWindow", "종료"))
 
+    # 검색 버튼 누르면 실행되는 Run 함수
     def Run(self):
+        self.th = threading.Thread(target=self.StartCrawl)
+        self.th.start()
+    
+    # 네이버 쇼핑 크롤링 함수
+    def StartCrawl(self):
         self.text.run('--Start work--')
         self.start_time = self.text.GetTime()
         
         try:
-            self.target_word = self.input_item_name.text()
+            self.target_word = self.input_item_name.text()  # 입력한 아이템 이름 
         except:
             self.target_word == ''
             self.text.run('원하시는 아이템 이름을 입력해주세요!')
             return
         try:
-            self.count = int(self.input_page_cnt.text())
+            self.count = int(self.input_page_cnt.text())    # 입력한 검색 페이지 수
         except:
             self.count = 1
 
         self.OpenUrl()
         self.CrawlData()
-    
+
+    # 네이버쇼핑 URL 오픈
     @pyqtSlot()
     def OpenUrl(self):
+        try:
+            shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
+        except FileNotFoundError:
+            pass
+        
+        try:
+            subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+        except:
+            subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+
         self.options = webdriver.ChromeOptions()
+        self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        # 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션
+        chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
+        try:
+            self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+        except:
+            chromedriver_autoinstaller.install(True)
+            self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+        self.driver.implicitly_wait(10)
+
+        # 속도 향상을 위한 옵션 해제
+        self.options.add_argument("disable-gpu") 
+        self.options.add_argument("disable-infobars")
+        self.options.add_argument("--disable-extensions")
+        prefs = {'profile.default_content_setting_values': {'cookies' : 2, 'images': 2, 'plugins' : 2, 'popups': 2, 'geolocation': 2, 'notifications' : 2, 'auto_select_certificate': 2, 'fullscreen' : 2, 'mouselock' : 2, 'mixed_script': 2, 'media_stream' : 2, 'media_stream_mic' : 2, 'media_stream_camera': 2, 'protocol_handlers' : 2, 'ppapi_broker' : 2, 'automatic_downloads': 2, 'midi_sysex' : 2, 'push_messaging' : 2, 'ssl_cert_decisions': 2, 'metro_switch_to_desktop' : 2, 'protected_media_identifier': 2, 'app_banner': 2, 'site_engagement' : 2, 'durable_storage' : 2}}   
+        self.options.add_experimental_option('prefs', prefs)
+        # 크롬 브라우저와 셀레니움을 사용하면서 발생되는 '시스템에 부착된 장치가 작동하지 않습니다.' 라는 크롬 브라우저의 버그를 조치하기 위한 코드. 
         self.options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        self.driver = webdriver.Chrome("./driver/chromedriver.exe", options=self.options);
+
+        # 윈도우 사이즈 맥스로 키우기
         self.driver.maximize_window()
         self.driver.get('https://www.naver.com')
         self.text.run('네이버 URL open 완료')
 
         time.sleep(self.process_delay)
 
+    # 네이버쇼핑 크롤링 함수
     def CrawlData(self):
-        ac = ActionChains(self.driver)
+        ac = ActionChains(self.driver)  # 셀레니움 동작을 바인딩 하여 동작 할 수 있게 하는 모듈
+        # 쇼핑 배너 클릭
         shopping_btn = self.driver.find_element_by_xpath('//*[@id="NM_FAVORITE"]/div[1]/ul[1]/li[5]/a').click()
         try:
             wait = WebDriverWait(self.driver, 10)
+            # 쇼핑 페이지로 잘 넘어왔는지 체크하는 코드
             element = wait.until(EC.presence_of_element_located((By.ID, 'header')))
         except:
             self.text.run('네이버 쇼핑 URL open에 실패했습니다.')
             self.driver.quit()
 
         time.sleep(self.process_delay)
+        # 검색창
         search_tab = self.driver.find_element_by_xpath('//*[@id="autocompleteWrapper"]/input[1]')
+        # 검색창에 입력받은 아이템 이름 입력 후 엔터
         ac.move_to_element(search_tab).click().pause(2).send_keys(self.target_word).pause(1).send_keys(Keys.ENTER).perform()
         try:
             wait = WebDriverWait(self.driver, 10)
@@ -178,7 +231,8 @@ class MyWindow(QMainWindow):
         except:
             self.text.run('검색에 실패했습니다.')
             self.driver.quit()
-
+        
+        self.text.run('{} 검색 성공!'.format(self.target_word))
         time.sleep(self.process_delay)
          # 80개씩 보기
         view_item_tab = self.driver.find_element_by_css_selector('.subFilter_sort_choice__1SFXG > div:nth-child(3) > a')
@@ -187,22 +241,25 @@ class MyWindow(QMainWindow):
         ac.move_to_element(max_item_list).click().pause(2).perform()
 
         # 페이지 끝까지 스크롤
+        # 윈도우의 첫 좌표 대비 끝 좌표를 비교하여 같을 때까지 스크롤바를 내리는 로직
         before_h = self.driver.execute_script('return window.scrollY')
         while(True):
             self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
             time.sleep(1)
-            after_h = self.driver.execute_script('return window.scrollY') 
+            after_h = self.driver.execute_script('return window.scrollY')
 
             if after_h == before_h:
                 break
             else:
                 before_h = after_h
-
+        # 현재 페이지에 나와 있는 아이템 테이블들의 정보를 받아오는 코드
         items = self.driver.find_elements_by_css_selector('.basicList_info_area__17Xyo')
         list_cnt = len(items)
-        final_res = [['', '', '', '', '', '', '']] * (list_cnt * self.count)
-        final_res = pd.DataFrame(final_res)
-        final_res.columns = ['상품명', '최저가', '스토어 갯수', '별점', '리뷰 갯수', '등록월', '스토어 링크']
+        # 엑셀 파일에 담을 리스트 초기화
+        wb = openpyxl.Workbook()
+        sheet = wb.active
+        #sheet.append(['상품명', '최저가', '스토어 갯수', '별점', '리뷰 갯수', '등록월', '스토어 링크'])
+        sheet.append(['상품명', '최저가', '별점', '리뷰 갯수', '등록월', '스토어 링크'])    # 스토어 갯수가 없는 경우가 많아 크롤링 속도가 느려지는 경우가 많이 발생
 
         for i in range(self.count):
             if i != 0:
@@ -220,59 +277,73 @@ class MyWindow(QMainWindow):
 
                 items = self.driver.find_elements_by_css_selector('.basicList_info_area__17Xyo')
             idx = 0
-
+            # 각 아이템별 데이터 크롤링
             for item in items:
-                title = item.find_element_by_css_selector('.basicList_title__3P9Q7').text
+                # 아이템명
                 try:
-                    min_price = int(item.find_element_by_css_selector('.price_num__2WUXn').text.strip('원').replace(',', ''))
+                    title = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_title__3P9Q7'))).text
+                except:
+                    title = ''
+                # 최저가
+                try:
+                    min_price = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.price_num__2WUXn')))
+                    min_price = int(min_price.text.strip('원').replace(',', ''))
                 except:
                     min_price = 0
+                # 스토어 갯수
+                # try:
+                #     store_cnt = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_compare__3AjuT')))
+                #     store_cnt = int(store_cnt.text.split('판매처 ')[1])
+                # except:
+                #     store_cnt = 1
+                # 스토어 링크
+                store_link = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_link__1MaTN'))).get_attribute('href')
+                # 별점
                 try:
-                    store_cnt = int(item.find_element_by_css_selector('.basicList_compare__3AjuT').text.split('판매처 ')[1])
-                except:
-                    store_cnt = 1
-                store_link = item.find_element_by_css_selector('.basicList_link__1MaTN').get_attribute('href')
-                try:
-                    review_score = item.find_element_by_css_selector('.basicList_star__3NkBn').text
+                    review_score = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_star__3NkBn')))
+                    review_score = review_score.text
                 except:
                     review_score = 0
+                # 리뷰 갯수
                 try:
-                    review_cnt = int(item.find_element_by_css_selector('.basicList_num__1yXM9').text)
+                    review_cnt = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_num__1yXM9')))
+                    review_cnt = int(review_cnt.text)
                 except:
                     review_cnt = 0
-
+                # 등록월일
                 reg_data_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[2]/div[5]/span[1]'.format(str(idx + 1))
-                reg_date = item.find_element_by_xpath(reg_data_xpath).text.split('등록일 ')[1]
+                reg_date = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, reg_data_xpath))).text.split('등록일 ')[1]
 
-                final_res.iloc[idx + (i * list_cnt)][0] = title
-                final_res.iloc[idx + (i * list_cnt)][1] = min_price
-                final_res.iloc[idx + (i * list_cnt)][2] = store_cnt
-                final_res.iloc[idx + (i * list_cnt)][3] = review_score
-                final_res.iloc[idx + (i * list_cnt)][4] = review_cnt
-                final_res.iloc[idx + (i * list_cnt)][5] = reg_date
-                final_res.iloc[idx + (i * list_cnt)][6] = store_link
+                # 크롤링 결과 엑셀로 저장
+                current_path = os.getcwd()
+                now_time = datetime.datetime.now()
+                now_date = now_time.strftime('%Y-%m-%d') + '_'  #YYYY-MM-DD
+                #sheet.append([title, min_price, store_cnt, review_score, review_cnt, reg_date, store_link])
+                sheet.append([title, min_price, review_score, review_cnt, reg_date, store_link])
+                wb.save("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx")
+
+                self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(i + 1, idx + 1))
 
                 idx += 1
-
+                
+            self.text.run('{}페이지 크롤링 완료!'.format(i + 1))
+            # 다음 페이지로 넘기기
             self.driver.find_element_by_css_selector('.pagination_next__1ITTf').click()
             time.sleep(self.process_delay)
-        
-        current_path = os.getcwd()
-        now_time = datetime.datetime.now()
-        now_date = now_time.strftime('%Y-%m-%d-%H%M') + '_'
-        # 결과값 저장
-        final_res = final_res.drop_duplicates(['스토어 링크'], keep='last')
-        if final_res.iloc[0][0] == '':
-            final_res = final_res.drop(final_res.index[0])
-        final_res = final_res.sort_values(by='최저가')
-        final_res.to_excel("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx", index=False)
+
         # 크롬드라이버 종료
         self.end_time = self.text.GetTime()
         diff_time = self.end_time - self.start_time
         self.text.run('--End work--')
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
         self.driver.quit()
+    
+    # 쓰레드 종료
+    def KillThread(self):
+        pid = os.getpid()
+        os.kill(pid, 2)
 
+    # UI에 텍스트 출력
     @pyqtSlot(str)
     def ConnectTextBrowser(self, print_str):
         self.textBrowser.append(print_str)
