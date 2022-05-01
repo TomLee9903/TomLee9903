@@ -481,9 +481,9 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('캡차 보안문자 : {}'.format(text))
                 captcha_block = self.driver.find_element_by_css_selector('#ctl00_ContentPlaceHolder1_txtConfirmNumber')
                 final_reserve = self.driver.find_element_by_css_selector('#ctl00_ContentPlaceHolder1_lbtOK')
-#                self.act.send_keys_to_element(captcha_block, text).click(final_reserve).perform()
+                self.act.send_keys_to_element(captcha_block, text).click(final_reserve).perform()
         #        self.act.send_keys_to_element(captcha_block, text).perform()
-                self.act.click(final_reserve).perform()
+#                self.act.click(final_reserve).perform()
                 time.sleep(0.5)
                 try:
                     result = WebDriverWait(self.driver, 0.3).until(EC.alert_is_present())
@@ -598,15 +598,15 @@ class MyWindow(QMainWindow, form_class):
         self.text.run('주말 자동 예약 설정 완료. 월요일 오후 1시 59분 59초 경 웹페이지 새로고침 예정')
         self.text.run('주말 자동 예약 설정 완료. 월요일 오후 2시 00분부터 예약시작 예정')
 
-        # self.job1 = schedule.every().monday.at('13:58').do(self.AutoLogin)
-        # self.job2 = schedule.every().monday.at('13:59:30').do(self.EnterReservePage)
-        # self.job3 = schedule.every().monday.at('13:59:59').do(self.RefreshWeb)
-        # self.job4 = schedule.every().monday.at('14:00:00').do(self.DoReserve)
+        self.job1 = schedule.every().monday.at('13:58').do(self.AutoLogin)
+        self.job2 = schedule.every().monday.at('13:59:30').do(self.EnterReservePage)
+        self.job3 = schedule.every().monday.at('13:59:59').do(self.RefreshWeb)
+        self.job4 = schedule.every().monday.at('14:00:00').do(self.DoReserve)
 
-        self.job1 = schedule.every().monday.at('01:30').do(self.AutoLogin)
-        self.job2 = schedule.every().monday.at('01:30:30').do(self.EnterReservePage)
-        self.job3 = schedule.every().monday.at('01:30:59').do(self.RefreshWeb)
-        self.job4 = schedule.every().monday.at('01:31:00').do(self.DoReserve)
+        # self.job1 = schedule.every().monday.at('01:30').do(self.AutoLogin)
+        # self.job2 = schedule.every().monday.at('01:30:30').do(self.EnterReservePage)
+        # self.job3 = schedule.every().monday.at('01:30:59').do(self.RefreshWeb)
+        # self.job4 = schedule.every().monday.at('01:31:00').do(self.DoReserve)
 
         while True:
             if self.exit_event_th1 == True:
@@ -620,15 +620,15 @@ class MyWindow(QMainWindow, form_class):
         self.text.run('평일 자동 예약 설정 완료. 오전 8시 59분 59초 경 웹페이지 새로고침 예정')
         self.text.run('평일 자동 예약 설정 완료. 오전 9시 00분부터 예약시작 예정')
 
-        # self.job5 = schedule.every().day.at('08:58').do(self.AutoLogin)
-        # self.job6 = schedule.every().day.at('08:59:30').do(self.EnterReservePage)
-        # self.job7 = schedule.every().day.at('08:59:59').do(self.RefreshWeb)
-        # self.job8 = schedule.every().day.at('09:00:00').do(self.DoReserve)
+        self.job5 = schedule.every().day.at('08:58').do(self.AutoLogin)
+        self.job6 = schedule.every().day.at('08:59:30').do(self.EnterReservePage)
+        self.job7 = schedule.every().day.at('08:59:59').do(self.RefreshWeb)
+        self.job8 = schedule.every().day.at('09:00:00').do(self.DoReserve)
 
-        self.job5 = schedule.every().monday.at('01:31').do(self.AutoLogin)
-        self.job6 = schedule.every().monday.at('01:31:30').do(self.EnterReservePage)
-        self.job7 = schedule.every().monday.at('01:31:59').do(self.RefreshWeb)
-        self.job8 = schedule.every().monday.at('01:32:00').do(self.DoReserve)
+        # self.job5 = schedule.every().monday.at('01:31').do(self.AutoLogin)
+        # self.job6 = schedule.every().monday.at('01:31:30').do(self.EnterReservePage)
+        # self.job7 = schedule.every().monday.at('01:31:59').do(self.RefreshWeb)
+        # self.job8 = schedule.every().monday.at('01:32:00').do(self.DoReserve)
 
         while True:
             if self.exit_event_th2 == True:
