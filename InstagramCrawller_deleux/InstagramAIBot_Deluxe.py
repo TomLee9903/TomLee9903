@@ -70,6 +70,7 @@ class MyWindow(QMainWindow, form_class):
         self.is_reply = False
         self.is_like = False
         self.is_follow = False
+        self.re_start = False
         self.comment_check.clicked.connect(self.IsCheckComment)
         self.relogin_checkBox.clicked.connect(self.IsCheckReLogin)
         self.disable_follow_check.clicked.connect(self.IsCheckDisableFollow)
@@ -151,7 +152,7 @@ class MyWindow(QMainWindow, form_class):
         except:
             self.relogin_min = 600
 
-        if self.open_url == True:
+        if self.open_url == True and self.re_start == False:
             self.OpenUrl()
         self.LoginUrl(self.id, self.pw)
         self.CrawlData()
@@ -246,13 +247,16 @@ class MyWindow(QMainWindow, form_class):
             print(username_box_check)
         except:
             self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
-            self.driver.quit()
+            self.LogOut()
+            self.re_start = True
+            return 0
         try:
             self.nickname = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img')))\
                                                         .accessible_name.split('님의')[0]
         except:
             self.text.run('회원님의 Nickname을 가져오는데 실패했습니다.')
-#            self.driver.quit()
+            self.LogOut()
+            self.re_start = True
             return 0
 
         self.text.run('인스타그램 log-in 완료')
@@ -267,13 +271,17 @@ class MyWindow(QMainWindow, form_class):
         try:
             wait = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.ID, 'react-root')))
         except:
-            self.text.run("크롤링이 비정상적으로 종료되었습니다")
-            self.driver.quit()
+            self.text.run("해시태그 검색에 실패했습니다.")
+            self.LogOut()
+            self.re_start = True
+            return 0
         try:
             wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="react-root"]/section/main')))
         except:
-            self.text.run("크롤링이 비정상적으로 종료되었습니다")
-            self.driver.quit()
+            self.text.run("해시태그 검색에 실패했습니다.")
+            self.LogOut()
+            self.re_start = True
+            return 0
         
         time.sleep(5)
         self.text.run("{} 해시태그 최근 게시물 searching 시작!".format(self.target_word))
@@ -281,8 +289,10 @@ class MyWindow(QMainWindow, form_class):
             wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.eLAPa')))
 #            self.driver.find_element_by_css_selector('div.eLAPa').click()
         except:
-            self.text.run("크롤링이 비정상적으로 종료되었습니다")
-            self.driver.quit()
+            self.text.run("인기 게시물을 찾을 수 없습니다.")
+            self.LogOut()
+            self.re_start = True
+            return 0
 
         time.sleep(10)
         self.driver.find_element_by_css_selector('div.eLAPa').click()
@@ -312,8 +322,10 @@ class MyWindow(QMainWindow, form_class):
                                 try:
                                     element = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[1]')
                                 except:
-                                    self.text.run("Cannot found the comments")
+                                    self.text.run("피드 내용 크롤링에 실패했습니다.")
                                     self.open_url = False
+                                    self.LogOut()
+                                    self.re_start = True
                                     break
 
             is_skip = False
@@ -349,6 +361,8 @@ class MyWindow(QMainWindow, form_class):
             except:
                 self.text.run("크롤링이 비정상적으로 종료되었습니다")
                 self.open_url = False
+                self.LogOut()
+                self.re_start = True
                 break
 
             self.date = element.accessible_name
@@ -401,6 +415,7 @@ class MyWindow(QMainWindow, form_class):
             print('{}{}번째 게시물 탐색 완료'.format(now, i + 1))
             if i == (self.count - 1):
                 self.text.run('마지막 게시물입니다.')
+                self.re_start = True
                 break
             else:
                 i += 1
@@ -450,12 +465,7 @@ class MyWindow(QMainWindow, form_class):
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
         self.text.run('')
         self.driver.get('https://www.instagram.com')
-
-        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img'))).click()
-        time.sleep(2)
-        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6)'))).click()
-        # pid = self.driver.service.process.pid
-        # os.system("taskkill /f /im chromedriver.exe /t")
+        self.LogOut()
 
         if self.re_login == True:
             self.open_url = False
@@ -564,10 +574,21 @@ class MyWindow(QMainWindow, form_class):
         return 1
 
     def ClickNextButton(self):
-        element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
+        try:
+            element = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.l8mY4.feth3')))
+        except:
+            return 0
         next_btn = self.driver.find_element_by_css_selector('div.l8mY4.feth3')
         self.act.click(next_btn).perform()
         time.sleep(5)
+
+        return 1
+
+    def LogOut(self):
+        self.driver.get('https://instagram.com')
+        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img'))).click()
+        time.sleep(2)
+        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6)'))).click()
 
     @pyqtSlot(str)
     def ConnectTextBrowser(self, print_str):
