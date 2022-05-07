@@ -65,8 +65,10 @@ class MyWindow(QMainWindow, form_class):
         self.retry_radio.clicked.connect(self.SetReserveType)
         self.week_cancel_btn.clicked.connect(self.WeekCanceljob)
         self.weekend_cancel_btn.clicked.connect(self.WeekendCanceljob)
+        self.calendarWidget.selectionChanged.connect(self.ShowDate)
         self.exit_event_th1 = False
         self.exit_event_th2 = False
+        self.cal_date = self.calendarWidget.selectedDate()
 
         self.reserve_type = 0
         self.retry = False
@@ -83,9 +85,6 @@ class MyWindow(QMainWindow, form_class):
         for m in range(time_table):
             self.start_time_combo.addItem(self.time_table.iloc[m][0].strftime('%H:%M'))
             self.end_time_combo.addItem(self.time_table.iloc[m][0].strftime('%H:%M'))
-            
-            self.start_time_combo_2.addItem(self.time_table.iloc[m][1].strftime('%H:%M'))
-            self.end_time_combo_2.addItem(self.time_table.iloc[m][1].strftime('%H:%M'))
 
         columns = self.time_table.columns
         for j in range(len(columns)):
@@ -102,6 +101,11 @@ class MyWindow(QMainWindow, form_class):
         else:
             QCloseEvent.ignore()
     
+    def ShowDate(self):
+        self.cal_date = self.calendarWidget.selectedDate()
+        str_date = self.cal_date.toString('yyyy년 MM월 dd일')
+        self.text.run('선택된 날짜 : {}'.format(str_date))
+
     def SetReserveType(self):
         if self.auto_weekend_radio.isChecked():
             self.reserve_type = 0
@@ -208,15 +212,33 @@ class MyWindow(QMainWindow, form_class):
         
         # 주차 계산해서 당일 기준 UI에 세팅된 요일의 다음주 날짜 xpath 세팅
         self.date_dict = {'일요일':1, '월요일':2, '화요일':3, '수요일':4, '목요일':5, '금요일':6, '토요일':7}
+        next_month_date_dict = {0:'월요일', 1:'화요일', 2:'수요일', 3:'목요일', 4:'금요일', 5:'토요일', 6:'일요일'}
         now = datetime.datetime.now()
+        month = self.cal_date.month()
+        str_date_time = self.cal_date.toString('yyyy-MM-dd')
+        weekday = datetime.datetime.strptime(str_date_time, '%Y-%m-%d').weekday()
         today_week = self.get_week_no(now.year, now.month, now.day)
-        target_date = self.date_combo.currentText()
+        selected_week = self.get_week_no(self.cal_date.year(), self.cal_date.month(), self.cal_date.day())
+        week_delta = abs(today_week - selected_week)
+
+        if week_delta >= 2 and now.month != self.cal_date.month():
+            self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 아닙니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
+            time.sleep(1)
+            return 0
+            
+        target_date = next_month_date_dict[weekday]
         find_date = self.date_dict[target_date]
-        if target_date == '일요일':
-            target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[5]/td[1]'
+        if today_week < selected_week:
+            if week_delta == 1:
+                target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[4]/td[{}]'.format(find_date)
+            elif week_delta == 2:
+                target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[5]/td[{}]'.format(find_date)
+        elif today_week == selected_week:
+            target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[3]/td[{}]'.format(find_date)
         else:
-            target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[4]/td[{}]'.format(find_date)
-        
+            self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 지났습니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
+            time.sleep(1)
+            return 0
 #        target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[3]/td[3]'
         
         try:
@@ -227,6 +249,11 @@ class MyWindow(QMainWindow, form_class):
             return 0
 
         date = re.findall(r'\d+', clicked_date)
+        if len(date) == 0:
+            self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 지났습니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
+            time.sleep(1)
+            return 0
+
         self.text.run('타겟 예약 날짜 : {}월 {}일 {}'.format(date[0], date[1], target_date))
         
         # 캘린더에서 타겟 날짜 선택
@@ -257,128 +284,134 @@ class MyWindow(QMainWindow, form_class):
             return 0
         
         # 에덴~밸리코스까지 UI에 세팅된 시작/종료 시간 사이 시간대로 예약 시작
-        for i in range(len(self.course_names)):
-            course_text = self.course_names[i]
-            if course_text == '에덴코스':
-                course_id = 1
-                target_start_time = self.start_time_combo.currentText()
-                target_end_time = self.end_time_combo.currentText()
-            elif course_text == '밸리코스':
-                course_id = 2
-                target_start_time = self.start_time_combo_2.currentText()
-                target_end_time = self.end_time_combo_2.currentText()
+        course_id = [1, 2]
+        target_start_time = self.start_time_combo.currentText()
+        target_end_time = self.end_time_combo.currentText()
 
-            target_start_idx = self.time_table[self.time_table[course_text] == target_start_time].index[0]
-            target_end_idx = self.time_table[self.time_table[course_text] == target_end_time].index[0]
-            search_range_df = self.time_table[course_text][target_start_idx:target_end_idx+1]
-            j = 0
-            while j < search_range_df.shape[0]:
-                time_text = search_range_df.iloc[j]
-                previous_time = ''
-                # 코스 내 타임 테이블과 UI의 시간을 비교하여 xpath setting
-                target_idx = (2 * target_start_idx) + 1
-                tt = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody'.format(course_id))))
+        target_start_idx = self.time_table[self.time_table[0] == target_start_time].index[0]
+        target_end_idx = self.time_table[self.time_table[0] == target_end_time].index[0]
+        search_range_df = self.time_table[0][target_start_idx:target_end_idx+1]
+        j = 0
+        while j < search_range_df.shape[0]:
+            time_text = search_range_df.iloc[j]
+            break_loop = False
+            previous_time = ''
+            # 코스 내 타임 테이블과 UI의 시간을 비교하여 xpath setting
+            target_idx = (2 * target_start_idx) + 1
+            for ii in range(len(course_id)):
+                tt = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody'.format(course_id[ii]))))
                 r = re.compile('\d\d:\d\d')
                 m = pd.DataFrame(r.findall(tt.text))
                 try:
                     mm = sum(m[m[0].str.contains(time_text[0:3])].values.tolist(), [])
+                    break_loop = True
+                    break
                 except:
-                    self.text.run('{}의 {}시 시간대 예약이 다 찼습니다. 다른 코스를 이용해주세요.'.format(course_text, time_text[0:3]))
+                    self.text.run('{}의 {}시 시간대 예약이 다 찼습니다.'.format(self.course_names[ii], time_text[0:2]))
+                    break_loop = False
                     previous_time = time_text[0:3]
-                    amt_drop = len(search_range_df[search_range_df.str.contains(previous_time)])
-                    j += amt_drop
+                    self.driver.refresh()
                     continue
-                is_it = False
-                delta = 0
-                time_table_text = ''
-                idx = -1
-                if len(mm) != 0:
+
+            if break_loop != True:
+                amt_drop = len(search_range_df[search_range_df.str.contains(previous_time)])
+                j += amt_drop
+                self.driver.refresh()
+                continue
+
+            is_it = False
+            delta = 0
+            time_table_text = ''
+            idx = -1
+            if len(mm) != 0:
+                try:
+                    idx = m[m[0] == time_text].index[0]
+                except:
+                    for k in range(len(mm)):
+                        i_time = datetime.datetime.strptime(mm[k], '%H:%M')
+                        r_time = datetime.datetime.strptime(time_text, '%H:%M')
+                        delta = int((r_time - i_time).seconds / 60)
+                        if delta > 6:
+                            self.text.run('설정된 시간 {} | 웹사이트 시간 {}'.format(time_text, mm[k]))
+                            self.text.run('시간 차이가 7분 이상 나는 시간대입니다. 재탐색 중')
+                            target_start_idx += 1
+                            self.driver.refresh()
+                            continue
+                        else:
+                            idx = m[m[0] == mm[k]].index[0]
+                            break
+                if idx == -1:
+                    self.text.run('설정된 시간 {} | 웹사이트 시간 {}'.format(time_text, mm[k]))
+                    self.text.run('설정된 시간이 타임테이블에 없습니다.')
+                    j += 1
+                    target_start_idx += 1
+                    self.driver.refresh()
+                    break_loop = False
+                    continue
+                target_idx = (2 * idx) + 1
+                # if len(m) == 1:
+                #     try:
+                #         tt = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[2]'.format(course_id, target_idx))))
+                #         time_table = self.driver.find_element_by_xpath('//*[@id="ctl00_ContentPlaceHolder1_upPanel"]/div[2]/div/div[4]/div/div[{}]/table[2]'.format(course_id))
+                #         time_table_text = time_table.text
+                #     except:
+                #         self.text.run('현재 타임테이블에 선택하신 시간이 없습니다. 다른 시간대를 선택해주세요.')
+                #         self.text.run('Fail 코스 : {}'.format(course_text))
+                #         self.text.run('Fail 시간 : {}'.format(time_text))
+                #         j += 1
+                #         continue
+                #else:
+                for ii in range(len(course_id)):
                     try:
-                        idx = m[m[0] == time_text].index[0]
-                    except:
-                        for k in range(len(mm)):
-                            i_time = datetime.datetime.strptime(mm[k], '%H:%M')
-                            r_time = datetime.datetime.strptime(time_text, '%H:%M')
-                            delta = int((r_time - i_time).seconds / 60)
-                            if delta > 6:
-                                self.text.run('시간 차이가 7분 이상 나는 시간대입니다. 재탐색 중')
-                                self.text.run('Fail 코스 : {}'.format(course_text))
-                                self.text.run('Fail UI 시간 : {}'.format(time_text))
-                                self.text.run('Fail 웹사이트 시간 : {}'.format(mm[k]))
-                                target_start_idx += 1
+                        time_table = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[1]'.format(course_id[ii], target_idx))))
+                        time_click = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[2]/a'.format(course_id[ii], target_idx))))
+                        time_table_text = time_table.text
+                        actual_time = r.findall(time_table_text)[0]
+                        break_loop = True
+                        message = ''
+                        try:
+                            time_click.click()
+                            WebDriverWait(self.driver, 1).until(EC.alert_is_present())
+                            alert = Alert(self.driver)
+                            message = alert.text
+                            if '현재 다른회원님이 예약중입니다.' in message:
+                                alert.accept()
+                                self.text.run('{}코스 {}시간은 현재 다른회원님이 예약중입니다. 다른시간대를 선택해 주세요.'.format(self.course_names[ii], actual_time))
                                 continue
                             else:
-                                idx = m[m[0] == mm[k]].index[0]
+                                self.text.run('{}코스 {}시간 선택에 성공했습니다!'.format(self.course_names[ii], actual_time))
+                                is_it = True
+                                course_text = self.course_names[ii]
                                 break
-                    if idx == -1:
-                        self.text.run('현재 예약가능한 타임이 없습니다.')
-                        self.text.run('Fail 코스 : {}'.format(course_text))
-                        self.text.run('Fail 시간 : {}'.format(time_text))
-                        j += 1
-                        target_start_idx += 1
-                        continue
-                        
-                    # if len(m) == 1:
-                    #     try:
-                    #         tt = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[2]'.format(course_id, target_idx))))
-                    #         time_table = self.driver.find_element_by_xpath('//*[@id="ctl00_ContentPlaceHolder1_upPanel"]/div[2]/div/div[4]/div/div[{}]/table[2]'.format(course_id))
-                    #         time_table_text = time_table.text
-                    #     except:
-                    #         self.text.run('현재 타임테이블에 선택하신 시간이 없습니다. 다른 시간대를 선택해주세요.')
-                    #         self.text.run('Fail 코스 : {}'.format(course_text))
-                    #         self.text.run('Fail 시간 : {}'.format(time_text))
-                    #         j += 1
-                    #         continue
-                    #else:
-                    try:
-                        time_table = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[1]'.format(course_id, target_idx))))
-                        time_click = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[2]/a'.format(course_id, target_idx))))
-                        time_table_text = time_table.text
+                        except:
+                            self.text.run('{}코스 {}시간 선택에 성공했습니다!'.format(self.course_names[ii], actual_time))
+                            is_it = True
+                            course_text = self.course_names[ii]
+                            break
                     except:
-                        self.text.run('현재 타임테이블에 선택하신 시간이 없습니다. 다른 시간대를 선택해주세요.')
-                        self.text.run('Fail 코스 : {}'.format(course_text))
-                        self.text.run('Fail 시간 : {}'.format(time_text))
-                        j += 1
-                        target_start_idx += 1
+                        self.text.run('설정된 시간 {} | 웹사이트 시간 {}'.format(time_text, mm[k]))
+                        self.text.run('현재 {}코스 타임테이블에 선택하신 {} 시간이 없습니다. 다른 시간대를 선택해주세요.'.format(self.course_names[ii], time_text))
+                        self.driver.refresh()
+                        break_loop = False
                         continue
-                else:
-                    self.text.run('{}의 {}시 시간대 예약이 다 찼습니다. 다른 코스를 이용해주세요.'.format(course_text, time_text[0:3]))
-                    previous_time = time_text[0:3]
-                    amt_drop = len(search_range_df[search_range_df.str.contains(previous_time)])
-                    j += amt_drop
+
+                if break_loop != True:
+                    j += 1
+                    target_start_idx += 1
+                    self.driver.refresh()
                     continue
-
-                actual_time = r.findall(time_table_text)[0]
-
-                try:
-                    time_click.click()
-                    WebDriverWait(self.driver, 0.3).until(EC.alert_is_present())
-                    alert = Alert(self.driver)
-                    message = alert.text
-                    if '현재 다른회원님이 예약중입니다.' in message:
-                        alert.accept()
-                        self.text.run('현재 다른회원님이 예약중입니다. 다른시간대를 선택해 주세요.')
-                        self.text.run('Fail 코스 : {}'.format(course_text))
-                        self.text.run('Fail 시간 : {}'.format(actual_time))
-                        j += 1
-                        target_start_idx += 1
-                        continue
-                    else:
-                        self.text.run('시간 선택에 성공했습니다!')
-                        self.text.run('Success 코스! : {}'.format(course_text))
-                        self.text.run('Success 시간! : {}'.format(actual_time))
-                        is_it = True
-                        break
-                except:
-                    self.text.run('시간 선택에 성공했습니다!')
-                    self.text.run('Success 코스! : {}'.format(course_text))
-                    self.text.run('Success 시간! : {}'.format(actual_time))
-                    is_it = True
-                    break
-
+            else:
+                self.text.run('{}시 시간대 예약이 다 찼습니다. 다른 시간대를 이용해주세요.'.format(time_text[0:2]))
+                previous_time = time_text[0:3]
+                amt_drop = len(search_range_df[search_range_df.str.contains(previous_time)])
+                j += amt_drop
+                self.driver.refresh()
+                break_loop = False
+                continue
+            
             if is_it == True:
                 confirm_reserve = self.driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td/input').click()
-#                confirm_reserve = self.driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td/input')
+    #                confirm_reserve = self.driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td/input')
                 try:
                     result = WebDriverWait(self.driver, 1).until(EC.alert_is_present())
                     result = Alert(self.driver)
@@ -386,29 +419,25 @@ class MyWindow(QMainWindow, form_class):
                 except:
                     pass
                 self.text.run('')
-                self.text.run('예약이 성공적으로 완료 되었습니다.')
-                self.text.run('코스 : {}'.format(course_text))
-                self.text.run('시간 : {}'.format(time_text))
+                self.text.run('{}코스 {} 예약이 성공적으로 완료 되었습니다.'.format(course_text, actual_time))
                 time.sleep(3)
                 self.end_time = self.text.GetTime()
                 diff_time = self.end_time - self.start_time
                 self.text.run('--End work--')
                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-#                self.driver.quit()
                 break
             else:
-                if i == len(self.course_names) - 1:
+                if j == len(search_range_df.shape[0]) - 1:
                     self.end_time = self.text.GetTime()
                     diff_time = self.end_time - self.start_time
-                    self.text.run('실시간 예약에 실패했습니다. 다시 시도해주세요.')
+                    self.text.run('실시간 예약에 실패했습니다.')
                     self.text.run('--End work--')
                     self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                    return 0
                 else:
                     self.text.run('실시간 예약에 실패했습니다. 다시 시도해주세요.')
                     j += 1
                     target_start_idx += 1
-
+                    self.driver.refresh()
                     continue
 
     def get_week_no(self, y, m, d):

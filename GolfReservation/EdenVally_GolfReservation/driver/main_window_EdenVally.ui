@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>739</width>
-    <height>715</height>
+    <height>914</height>
    </rect>
   </property>
   <property name="font">
@@ -26,193 +26,27 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_11">
-    <item row="0" column="0">
-     <widget class="QGroupBox" name="groupBox_4">
-      <property name="font">
-       <font>
-        <family>맑은 고딕</family>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="title">
-       <string>Login Info</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="0">
-        <widget class="QLabel" name="id_label">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>12</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;ID&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="pw_label">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>12</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Password&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="input_id">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>12</pointsize>
-           <weight>50</weight>
-           <bold>false</bold>
-          </font>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>12</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;요일&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QComboBox" name="date_combo">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>12</pointsize>
-           <weight>50</weight>
-           <bold>false</bold>
-          </font>
-         </property>
-         <item>
-          <property name="text">
-           <string>일요일</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>월요일</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>화요일</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>수요일</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>목요일</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>금요일</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>토요일</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="input_pw">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>9</pointsize>
-           <weight>50</weight>
-           <bold>false</bold>
-          </font>
-         </property>
-         <property name="focusPolicy">
-          <enum>Qt::StrongFocus</enum>
-         </property>
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="2">
-        <spacer name="horizontalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>348</width>
-           <height>17</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="2">
-        <widget class="QLabel" name="label_3">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;에덴밸리리조트 Reservation AI bot&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
     <item row="1" column="0">
-     <spacer name="verticalSpacer">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeType">
-       <enum>QSizePolicy::Fixed</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>13</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item row="2" column="0">
      <layout class="QGridLayout" name="gridLayout_9">
-      <item row="0" column="0">
-       <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="2">
-         <widget class="QGroupBox" name="groupBox_8">
+      <item row="3" column="0">
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="font">
+           <font>
+            <family>HY견고딕</family>
+            <pointsize>9</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;@ by Tom Lee&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QTextBrowser" name="textBrowser">
           <property name="font">
            <font>
             <family>맑은 고딕</family>
@@ -221,106 +55,15 @@
             <bold>true</bold>
            </font>
           </property>
-          <property name="title">
-           <string>예약 타입</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_13">
-           <item row="1" column="2">
-            <widget class="QPushButton" name="week_cancel_btn">
-             <property name="text">
-              <string>Cancel</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QRadioButton" name="retry_radio">
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>예약 Re-try</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QRadioButton" name="auto_week_radio">
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>평일 자동 예약</string>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QRadioButton" name="manual_radio">
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>수동 예약</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QRadioButton" name="auto_weekend_radio">
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>주말 자동 예약</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <spacer name="horizontalSpacer_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="weekend_cancel_btn">
-             <property name="text">
-              <string>Cancel</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
          </widget>
         </item>
+       </layout>
+      </item>
+      <item row="2" column="0">
+       <widget class="QCalendarWidget" name="calendarWidget"/>
+      </item>
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_4">
         <item row="0" column="0">
          <widget class="QGroupBox" name="groupBox_6">
           <property name="font">
@@ -332,38 +75,9 @@
            </font>
           </property>
           <property name="title">
-           <string>에덴코스</string>
+           <string>시작/종료 시간</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_7">
-           <item row="0" column="0">
-            <widget class="QGroupBox" name="groupBox">
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>10</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="title">
-              <string>시작 시간</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_2">
-              <item row="0" column="0">
-               <widget class="QComboBox" name="start_time_combo">
-                <property name="font">
-                 <font>
-                  <family>맑은 고딕</family>
-                  <pointsize>11</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item row="1" column="0">
             <widget class="QGroupBox" name="groupBox_5">
              <property name="font">
@@ -380,6 +94,35 @@
              <layout class="QGridLayout" name="gridLayout_8">
               <item row="0" column="0">
                <widget class="QComboBox" name="end_time_combo">
+                <property name="font">
+                 <font>
+                  <family>맑은 고딕</family>
+                  <pointsize>11</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QGroupBox" name="groupBox">
+             <property name="font">
+              <font>
+               <family>맑은 고딕</family>
+               <pointsize>10</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>시작 시간</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="0" column="0">
+               <widget class="QComboBox" name="start_time_combo">
                 <property name="font">
                  <font>
                   <family>맑은 고딕</family>
@@ -417,8 +160,8 @@
           </layout>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QGroupBox" name="groupBox_9">
+        <item row="0" column="2">
+         <widget class="QGroupBox" name="groupBox_8">
           <property name="font">
            <font>
             <family>맑은 고딕</family>
@@ -428,140 +171,213 @@
            </font>
           </property>
           <property name="title">
-           <string>밸리코스</string>
+           <string>예약 타입</string>
           </property>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="1" column="0">
-            <widget class="QGroupBox" name="groupBox_10">
+          <layout class="QGridLayout" name="gridLayout_13">
+           <item row="4" column="1" colspan="2">
+            <widget class="QPushButton" name="start_btn">
              <property name="font">
               <font>
                <family>맑은 고딕</family>
-               <pointsize>10</pointsize>
+               <pointsize>16</pointsize>
                <weight>75</weight>
                <bold>true</bold>
               </font>
              </property>
-             <property name="title">
-              <string>종료 시간</string>
+             <property name="text">
+              <string>Start</string>
              </property>
-             <layout class="QGridLayout" name="gridLayout_10">
-              <item row="0" column="0">
-               <widget class="QComboBox" name="end_time_combo_2">
-                <property name="font">
-                 <font>
-                  <family>맑은 고딕</family>
-                  <pointsize>11</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-               </widget>
-              </item>
-             </layout>
             </widget>
            </item>
-           <item row="2" column="0">
-            <spacer name="horizontalSpacer_4">
+           <item row="3" column="1">
+            <widget class="QRadioButton" name="retry_radio">
              <property name="font">
               <font>
-               <family>HY견고딕</family>
+               <family>맑은 고딕</family>
                <pointsize>12</pointsize>
                <weight>75</weight>
                <bold>true</bold>
               </font>
              </property>
+             <property name="text">
+              <string>예약 Re-try</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QRadioButton" name="auto_weekend_radio">
+             <property name="font">
+              <font>
+               <family>맑은 고딕</family>
+               <pointsize>12</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>주말 자동 예약</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QRadioButton" name="manual_radio">
+             <property name="font">
+              <font>
+               <family>맑은 고딕</family>
+               <pointsize>12</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>수동 예약</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QRadioButton" name="auto_week_radio">
+             <property name="font">
+              <font>
+               <family>맑은 고딕</family>
+               <pointsize>12</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>평일 자동 예약</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QPushButton" name="week_cancel_btn">
+             <property name="text">
+              <string>Cancel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="weekend_cancel_btn">
+             <property name="text">
+              <string>Cancel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <spacer name="horizontalSpacer">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>154</width>
+               <width>40</width>
                <height>20</height>
               </size>
              </property>
             </spacer>
            </item>
-           <item row="0" column="0">
-            <widget class="QGroupBox" name="groupBox_2">
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>10</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="title">
-              <string>시작 시간</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_5">
-              <item row="0" column="0">
-               <widget class="QComboBox" name="start_time_combo_2">
-                <property name="font">
-                 <font>
-                  <family>맑은 고딕</family>
-                  <pointsize>11</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
           </layout>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QPushButton" name="start_btn">
-          <property name="font">
-           <font>
-            <family>맑은 고딕</family>
-            <pointsize>16</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Start</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="1" column="0">
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_5">
-          <property name="font">
-           <font>
-            <family>HY견고딕</family>
-            <pointsize>9</pointsize>
-            <weight>50</weight>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;@ by Tom Lee&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QTextBrowser" name="textBrowser">
-          <property name="font">
-           <font>
-            <family>맑은 고딕</family>
-            <pointsize>12</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
          </widget>
         </item>
        </layout>
       </item>
      </layout>
+    </item>
+    <item row="0" column="0">
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="font">
+       <font>
+        <family>맑은 고딕</family>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="title">
+       <string>Login Info</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="0" column="0">
+        <widget class="QLabel" name="id_label">
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>12</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;ID&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3" rowspan="2">
+        <widget class="QLabel" name="label_3">
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;에덴밸리리조트 Reservation AI bot&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="input_id">
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>12</pointsize>
+           <weight>50</weight>
+           <bold>false</bold>
+          </font>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLineEdit" name="input_pw">
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>9</pointsize>
+           <weight>50</weight>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::StrongFocus</enum>
+         </property>
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="pw_label">
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>12</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Password&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
