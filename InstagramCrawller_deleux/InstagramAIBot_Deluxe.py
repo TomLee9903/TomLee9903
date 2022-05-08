@@ -218,10 +218,10 @@ class MyWindow(QMainWindow, form_class):
             self.login_button = self.driver.find_element_by_css_selector('#loginForm > div > div:nth-child(3) > button');
             self.act.send_keys_to_element(self.id_box, id).send_keys_to_element(self.pw_box, pw).click(self.login_button).perform()
         except:
-            self.main_dis = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > section')))
+            self.main_dis = WebDriverWait(self.driver, 150).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > section')))
             print(self.main_dis)
         try:
-            second_security = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div:nth-child(1)')))
+            second_security = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div:nth-child(1)')))
             if '코드를 입력하세요' in second_security.text:
                 self.text.run('보안 코드를 입력해주세요.')
         except:
@@ -236,14 +236,14 @@ class MyWindow(QMainWindow, form_class):
         username_box_check.click()
         time.sleep(self.process_delay)
         try:
-            self.save_login_info_button = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm')))
+            self.save_login_info_button = WebDriverWait(self.driver, 100).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm')))
             self.save_login_info_button.click()
 #            self.act.click(self.save_login_info_button).perform()
         except:
             pass
 
         try:
-            username_box_check = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.ID, 'react-root')))
+            username_box_check = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.ID, 'react-root')))
             print(username_box_check)
         except:
             self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
@@ -251,7 +251,7 @@ class MyWindow(QMainWindow, form_class):
             self.re_start = True
             return 0
         try:
-            self.nickname = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img')))\
+            self.nickname = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img')))\
                                                         .accessible_name.split('님의')[0]
         except:
             self.text.run('회원님의 Nickname을 가져오는데 실패했습니다.')
@@ -269,14 +269,14 @@ class MyWindow(QMainWindow, form_class):
         url = "https://www.instagram.com/explore/tags/{}/".format(self.target_word)
         self.driver.get(url)
         try:
-            wait = WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.ID, 'react-root')))
+            wait = WebDriverWait(self.driver, 30).until(EC.presence_of_element_located((By.ID, 'react-root')))
         except:
             self.text.run("해시태그 검색에 실패했습니다.")
             self.LogOut()
             self.re_start = True
             return 0
         try:
-            wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="react-root"]/section/main')))
+            wait = WebDriverWait(self.driver, 100).until(EC.presence_of_element_located((By.XPATH, '//*[@id="react-root"]/section/main')))
         except:
             self.text.run("해시태그 검색에 실패했습니다.")
             self.LogOut()
@@ -305,7 +305,7 @@ class MyWindow(QMainWindow, form_class):
         while i < self.count:
             block_point = False
             try :
-                element = WebDriverWait(self.driver, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > section.EDfFK.ygqzn > div > div > div')))
+                element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > section.EDfFK.ygqzn > div > div > div')))
             except :
                 try :
                     element = WebDriverWait(self.driver, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > section.EDfFK.ygqzn > div > span > div')))
@@ -322,11 +322,20 @@ class MyWindow(QMainWindow, form_class):
                                 try:
                                     element = self.driver.find_element_by_xpath('/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[1]')
                                 except:
-                                    self.text.run("피드 내용 크롤링에 실패했습니다.")
-                                    self.open_url = False
-                                    self.LogOut()
-                                    self.re_start = True
-                                    break
+                                    self.driver.refresh()
+                                    time.sleep(10)
+                                    try:
+                                        first_feed = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.eLAPa')))
+                                        self.act.move_to_element(first_feed).click().perform()
+                                        time.sleep(2)
+                                        self.text.run("웹사이트 새로고침 후 재탐색 중.")
+                                        continue
+                                    except:
+                                        self.text.run("피드 내용 크롤링에 실패했습니다.")
+                                        self.open_url = False
+                                        self.LogOut()
+                                        self.re_start = True
+                                        return 0
 
             is_skip = False
             self.is_like = False
@@ -353,17 +362,19 @@ class MyWindow(QMainWindow, form_class):
                 # 좋아요 누르기
                 ret = self.ClickLikeButton()
                 if ret == 0:
-                    self.text.run("크롤링이 비정상적으로 종료되었습니다")
+                    self.text.run("{}번째 피드에 좋아요 누르기 실패".format(i + 1))
                     self.open_url = False
+                    self.LogOut()
+                    self.re_start = True
                     return 0
             try:
-                element = WebDriverWait(self.driver, 1.5).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[2]/div/a/div/time')))
+                element = WebDriverWait(self.driver, 150).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[2]/div/a/div/time')))
             except:
-                self.text.run("크롤링이 비정상적으로 종료되었습니다")
+                self.text.run("{}번째 피드 업로드 시간 크롤링 실패".format(i + 1))
                 self.open_url = False
                 self.LogOut()
                 self.re_start = True
-                break
+                return 0
 
             self.date = element.accessible_name
             self.current_link = self.driver.current_url
@@ -409,7 +420,7 @@ class MyWindow(QMainWindow, form_class):
             sheet.append([self.now, self.content_id, self.date, self.content, self.tag, self.like_cnt, self.current_link])
 
             wb.save("{}\\".format(current_path) + now_date + self.target_word + "_results.xlsx")
-            time.sleep(random.randrange(10, 100))
+            time.sleep(random.randrange(10, 150))
             
             self.text.run('{}번째 게시물 탐색 완료'.format(i + 1))
             print('{}{}번째 게시물 탐색 완료'.format(now, i + 1))
@@ -539,6 +550,13 @@ class MyWindow(QMainWindow, form_class):
         svg_txt = btn_svg.get_attribute('aria-label')
         if svg_txt == '좋아요':
             like_btn.click()
+            try:
+                interrupt_like = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN > div > div')))
+                self.driver.find_element_by_css_selector('body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm').click()
+                self.text.run('좋아요/팔로우 등의 자동 매크로 활동에 제한이 걸렸습니다. 1~2일 후 프로그램 사용 바랍니다.')
+                return 0
+            except:
+                pass
         else:
             self.is_like = True
         try:
