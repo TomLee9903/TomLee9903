@@ -212,6 +212,13 @@ class MyWindow(QMainWindow, form_class):
 
     def LoginUrl(self, id, pw):
         self.act = ActionChains(self.driver)
+        # 접속지가 해외일 경우, 쿠키 사용 허가를 위한 팝업이 뜸.
+        # 쿠키 사용 허가 클릭
+        try:
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN._4Yzd2 > div > div > button.aOOlW.HoLwm'))).click()
+            time.sleep(3)
+        except:
+            pass
         try:
             self.id_box = self.driver.find_element_by_css_selector("#loginForm > div > div:nth-child(1) > div > label > input");
             self.pw_box = self.driver.find_element_by_css_selector("#loginForm > div > div:nth-child(2) > div > label > input");

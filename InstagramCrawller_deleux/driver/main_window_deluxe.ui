@@ -436,8 +436,15 @@
  <tabstops>
   <tabstop>input_id</tabstop>
   <tabstop>input_pw</tabstop>
+  <tabstop>input_search</tabstop>
+  <tabstop>input_cnt</tabstop>
+  <tabstop>input_comment</tabstop>
+  <tabstop>comment_check</tabstop>
+  <tabstop>disable_follow_check</tabstop>
   <tabstop>start_btn</tabstop>
   <tabstop>textBrowser</tabstop>
+  <tabstop>relogin_checkBox</tabstop>
+  <tabstop>relogin_time</tabstop>
  </tabstops>
  <resources/>
  <connections/>
