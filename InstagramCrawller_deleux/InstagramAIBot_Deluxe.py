@@ -218,7 +218,7 @@ class MyWindow(QMainWindow, form_class):
             self.login_button = self.driver.find_element_by_css_selector('#loginForm > div > div:nth-child(3) > button');
             self.act.send_keys_to_element(self.id_box, id).send_keys_to_element(self.pw_box, pw).click(self.login_button).perform()
         except:
-            self.main_dis = WebDriverWait(self.driver, 150).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > section')))
+            self.main_dis = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > section')))
             print(self.main_dis)
         try:
             second_security = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div:nth-child(1)')))
@@ -227,7 +227,7 @@ class MyWindow(QMainWindow, form_class):
         except:
             pass
         try:
-            username_box_check = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div > div > button')))
+            username_box_check = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > div > div > div > div > button')))
             print(username_box_check)
         except:
 #            self.text.run('인스타그램 log-in 오류 -> 타임 아웃1')
@@ -236,14 +236,14 @@ class MyWindow(QMainWindow, form_class):
         username_box_check.click()
         time.sleep(self.process_delay)
         try:
-            self.save_login_info_button = WebDriverWait(self.driver, 100).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm')))
+            self.save_login_info_button = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm')))
             self.save_login_info_button.click()
 #            self.act.click(self.save_login_info_button).perform()
         except:
             pass
 
         try:
-            username_box_check = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.ID, 'react-root')))
+            username_box_check = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, 'react-root')))
             print(username_box_check)
         except:
             self.text.run('인스타그램 log-in 오류 -> 타임 아웃3')
@@ -251,7 +251,7 @@ class MyWindow(QMainWindow, form_class):
             self.re_start = True
             return 0
         try:
-            self.nickname = WebDriverWait(self.driver, 300).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img')))\
+            self.nickname = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img')))\
                                                         .accessible_name.split('님의')[0]
         except:
             self.text.run('회원님의 Nickname을 가져오는데 실패했습니다.')
