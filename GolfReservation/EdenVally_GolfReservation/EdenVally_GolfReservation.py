@@ -330,7 +330,7 @@ class MyWindow(QMainWindow, form_class):
                     for k in range(len(mm)):
                         i_time = datetime.datetime.strptime(mm[k], '%H:%M')
                         r_time = datetime.datetime.strptime(time_text, '%H:%M')
-                        delta = int((r_time - i_time).seconds / 60)
+                        delta = int(abs(r_time - i_time).seconds / 60)
                         if delta > 6:
                             self.text.run('설정된 시간 {} | 웹사이트 시간 {}'.format(time_text, mm[k]))
                             self.text.run('시간 차이가 7분 이상 나는 시간대입니다. 재탐색 중')
@@ -551,7 +551,6 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(1)
 
     def KillThread(self):
-        self.driver.quit()
         pid = os.getpid()
         os.kill(pid, 2)
 

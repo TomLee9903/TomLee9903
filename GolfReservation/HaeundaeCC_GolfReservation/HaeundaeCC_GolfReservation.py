@@ -369,7 +369,7 @@ class MyWindow(QMainWindow, form_class):
                         for k in range(len(mm)):
                             i_time = datetime.datetime.strptime(mm[k], '%H:%M')
                             r_time = datetime.datetime.strptime(time_text, '%H:%M')
-                            delta = int((r_time - i_time).seconds / 60)
+                            delta = int(abs(r_time - i_time).seconds / 60)
                             if delta > 6:
                                 self.text.run('시간 차이가 7분 이상 나는 시간대입니다. 재탐색 중')
                                 self.text.run('Fail 코스 : {}'.format(course_text))
@@ -440,7 +440,7 @@ class MyWindow(QMainWindow, form_class):
                 else:
                     try:
                         time_table.click()
-                        WebDriverWait(self.driver, 0.3).until(EC.alert_is_present())
+                        WebDriverWait(self.driver, 1).until(EC.alert_is_present())
                         alert = Alert(self.driver)
                         message = alert.text
                         if '선택하신 시간은 현재 다른 회원님이 예약중입니다.' in message:
@@ -593,15 +593,15 @@ class MyWindow(QMainWindow, form_class):
         self.text.run('웹페이지 refersh!')
 
     def ScheduleLoginForWeekend(self):
-        self.text.run('주말 자동 예약 설정 완료. 월요일 오후 1시 58분 경 URL 오픈 예정')
-        self.text.run('주말 자동 예약 설정 완료. 월요일 오후 1시 59분 30초 경 실시간예약 페이지 진입 예정')
-        self.text.run('주말 자동 예약 설정 완료. 월요일 오후 1시 59분 59초 경 웹페이지 새로고침 예정')
-        self.text.run('주말 자동 예약 설정 완료. 월요일 오후 2시 00분부터 예약시작 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오후 1시 58분 경 URL 오픈 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오후 1시 59분 30초 경 실시간예약 페이지 진입 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오후 1시 59분 59초 경 웹페이지 새로고침 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오후 2시 00분부터 예약시작 예정')
 
-        self.job1 = schedule.every().monday.at('13:58').do(self.AutoLogin)
-        self.job2 = schedule.every().monday.at('13:59:30').do(self.EnterReservePage)
-        self.job3 = schedule.every().monday.at('13:59:59').do(self.RefreshWeb)
-        self.job4 = schedule.every().monday.at('14:00:00').do(self.DoReserve)
+        self.job1 = schedule.every().day.at('13:58').do(self.AutoLogin)
+        self.job2 = schedule.every().day.at('13:59:30').do(self.EnterReservePage)
+        self.job3 = schedule.every().day.at('13:59:59').do(self.RefreshWeb)
+        self.job4 = schedule.every().day.at('14:00:00').do(self.DoReserve)
 
         # self.job1 = schedule.every().monday.at('01:30').do(self.AutoLogin)
         # self.job2 = schedule.every().monday.at('01:30:30').do(self.EnterReservePage)
@@ -637,7 +637,6 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(1)
     
     def KillThread(self):
-        self.driver.quit()
         pid = os.getpid()
         os.kill(pid, 2)
 
