@@ -348,7 +348,7 @@ class MyWindow(QMainWindow, form_class):
                     self.driver.refresh()
                     break_loop = False
                     continue
-                target_idx = (2 * idx) + 1
+                target_idx = (2 * (idx+1)) + 1
                 # if len(m) == 1:
                 #     try:
                 #         tt = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH,'/html/body/table/tbody/tr[3]/td[{}]/table/tbody/tr[{}]/td[2]'.format(course_id, target_idx))))
@@ -410,7 +410,8 @@ class MyWindow(QMainWindow, form_class):
                 continue
             
             if is_it == True:
-                confirm_reserve = self.driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td/input').click()
+                confirm_reserve = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '/html/body/table[1]/tbody/tr[7]/td/input'))).click()
+#                confirm_reserve = self.driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td/input').click()
     #                confirm_reserve = self.driver.find_element_by_xpath('/html/body/table[1]/tbody/tr[7]/td/input')
                 try:
                     result = WebDriverWait(self.driver, 1).until(EC.alert_is_present())
