@@ -81,6 +81,8 @@
           <property name="font">
            <font>
             <family>맑은 고딕</family>
+            <weight>75</weight>
+            <bold>true</bold>
            </font>
           </property>
           <property name="text">
@@ -353,19 +355,6 @@
           </property>
          </widget>
         </item>
-        <item row="9" column="4">
-         <widget class="QCheckBox" name="disable_follow_check">
-          <property name="font">
-           <font>
-            <family>맑은 고딕</family>
-            <pointsize>12</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>자동 팔로우 해제</string>
-          </property>
-         </widget>
-        </item>
         <item row="8" column="0" rowspan="2">
          <widget class="QLabel" name="label_6">
           <property name="font">
@@ -377,6 +366,52 @@
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;댓글&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;게시물 Type&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="1">
+         <widget class="QRadioButton" name="recent_radio">
+          <property name="text">
+           <string>최근 게시물</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="3">
+         <widget class="QRadioButton" name="popular_radio">
+          <property name="text">
+           <string>인기 게시물</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="4">
+         <widget class="QCheckBox" name="disable_follow_check">
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>자동 팔로우 해제</string>
           </property>
          </widget>
         </item>
@@ -440,7 +475,6 @@
   <tabstop>input_cnt</tabstop>
   <tabstop>input_comment</tabstop>
   <tabstop>comment_check</tabstop>
-  <tabstop>disable_follow_check</tabstop>
   <tabstop>start_btn</tabstop>
   <tabstop>textBrowser</tabstop>
   <tabstop>relogin_checkBox</tabstop>

@@ -62,6 +62,8 @@ class MyWindow(QMainWindow, form_class):
         self.cnt = 0
         self.setWindowIcon(QIcon('./driver/instagram_img.png'))
         self.start_btn.clicked.connect(self.MakeThread)
+        self.recent_radio.clicked.connect(self.SetFeedType)
+        self.popular_radio.clicked.connect(self.SetFeedType)
         self.process_delay = 5
         self.re_login = False
         self.open_url = True
@@ -74,6 +76,7 @@ class MyWindow(QMainWindow, form_class):
         self.comment_check.clicked.connect(self.IsCheckComment)
         self.relogin_checkBox.clicked.connect(self.IsCheckReLogin)
         self.disable_follow_check.clicked.connect(self.IsCheckDisableFollow)
+        self.feed_type = 0
 
     def closeEvent(self, QCloseEvent):
         ans = QMessageBox.question(self, "종료 확인", "종료하시겠습니까?",
@@ -106,6 +109,12 @@ class MyWindow(QMainWindow, form_class):
         elif is_checked_relogin == True:
             self.re_login = True
             self.relogin_time.setEnabled(True)
+
+    def SetFeedType(self):
+        if self.recent_radio.isChecked():
+            self.feed_type = 0
+        elif self.popular_radio.isChecked():
+            self.feed_type = 1
 
     def ButtonFunction(self):
         self.text = TextBrowser(self)
@@ -291,18 +300,8 @@ class MyWindow(QMainWindow, form_class):
             return 0
         
         time.sleep(5)
-        self.text.run("{} 해시태그 최근 게시물 searching 시작!".format(self.target_word))
-        try:
-            wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.eLAPa')))
-#            self.driver.find_element_by_css_selector('div.eLAPa').click()
-        except:
-            self.text.run("인기 게시물을 찾을 수 없습니다.")
-            self.LogOut()
-            self.re_start = True
-            return 0
-
+        self.ClickFeed()
         time.sleep(10)
-        self.driver.find_element_by_css_selector('div.eLAPa').click()
         block_text_list = ['부업', '재테크', '출금', '공짜', '수익', '카톡', '원금', '부자', 'Repost', '문의전화', '직장인부업', '주부부업', '마케팅', 
                             '마케터']
         time.sleep(1)
@@ -332,8 +331,7 @@ class MyWindow(QMainWindow, form_class):
                                     self.driver.refresh()
                                     time.sleep(10)
                                     try:
-                                        first_feed = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.eLAPa')))
-                                        self.act.move_to_element(first_feed).click().perform()
+                                        self.ClickFeed()
                                         time.sleep(2)
                                         self.text.run("웹사이트 새로고침 후 재탐색 중.")
                                         continue
@@ -609,11 +607,54 @@ class MyWindow(QMainWindow, form_class):
 
         return 1
 
+    def ClickFeed(self):
+        if self.feed_type == 0:
+            self.text.run("{} 해시태그 최근 게시물 searching 시작!".format(self.target_word))
+            try:
+                wait = WebDriverWait(self.driver, 100).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > main > article > div:nth-child(3) > div > div:nth-child(1) > div:nth-child(1) > a > div > div._9AhH0')))
+            except:
+                self.text.run("최근 게시물을 찾을 수 없습니다.")
+                self.LogOut()
+                self.re_start = True
+                return 0
+
+            first_feed = self.driver.find_element_by_css_selector('#react-root > section > main > article > div:nth-child(3) > div > div:nth-child(1) > div:nth-child(1) > a > div > div._9AhH0')
+            self.act.move_to_element(first_feed).perform()
+            time.sleep(2)
+            try:
+                self.act.move_to_element(first_feed).click().perform()
+            except:                                       
+                self.text.run("최근 게시물 클릭에 실패했습니다.")
+                self.LogOut()
+                self.re_start = True
+                return 0
+
+        elif self.feed_type == 1:
+            self.text.run("{} 해시태그 인기 게시물 searching 시작!".format(self.target_word))
+            try:
+                wait = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.eLAPa')))
+    #            self.driver.find_element_by_css_selector('div.eLAPa').click()
+            except:
+                self.text.run("인기 게시물을 찾을 수 없습니다.")
+                self.LogOut()
+                self.re_start = True
+                return 0
+            
+            self.driver.find_element_by_css_selector('div.eLAPa').click()
+
     def LogOut(self):
         self.driver.get('https://instagram.com')
-        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img'))).click()
+        try:
+            WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img'))).click()
+        except:
+            self.driver.refresh()
+            WebDriverWait(self.driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.EforU > span > img'))).click()
         time.sleep(2)
-        WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6)'))).click()
+        try:
+            WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6)'))).click()
+        except:
+            self.driver.refresh()
+            WebDriverWait(self.driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#react-root > section > nav > div._8MQSO.Cx7Bp > div > div > div.ctQZg.KtFt3 > div > div:nth-child(6) > div.poA5q > div.uo5MA._2ciX.tWgj8.XWrBI > div._01UL2 > div:nth-child(6)'))).click()
 
     @pyqtSlot(str)
     def ConnectTextBrowser(self, print_str):
