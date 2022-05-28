@@ -331,6 +331,23 @@ class MyWindow(QMainWindow, form_class):
                                     self.driver.refresh()
                                     time.sleep(10)
                                     try:
+                                        url = "https://www.instagram.com/explore/tags/{}/".format(self.target_word)
+                                        self.driver.get(url)
+                                        try:
+                                            wait = WebDriverWait(self.driver, 30).until(EC.presence_of_element_located((By.ID, 'react-root')))
+                                        except:
+                                            self.text.run("해시태그 검색에 실패했습니다.")
+                                            self.LogOut()
+                                            self.re_start = True
+                                            return 0
+                                        try:
+                                            wait = WebDriverWait(self.driver, 100).until(EC.presence_of_element_located((By.XPATH, '//*[@id="react-root"]/section/main')))
+                                        except:
+                                            self.text.run("해시태그 검색에 실패했습니다.")
+                                            self.LogOut()
+                                            self.re_start = True
+                                            return 0
+                                            
                                         self.ClickFeed()
                                         time.sleep(2)
                                         self.text.run("웹사이트 새로고침 후 재탐색 중.")
@@ -373,13 +390,16 @@ class MyWindow(QMainWindow, form_class):
                     self.re_start = True
                     return 0
             try:
-                element = WebDriverWait(self.driver, 150).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[2]/div/a/div/time')))
+                element = WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > div.RnEpo._Yhr4 > div.pbNvD.QZZGH.bW6vo > div > article > div > div.HP0qD > div > div > div.eo2As > div.NnvRN > div > div > a > div > time')))
             except:
-                self.text.run("{}번째 피드 업로드 시간 크롤링 실패".format(i + 1))
-                self.open_url = False
-                self.LogOut()
-                self.re_start = True
-                return 0
+                try:
+                    element = WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[6]/div[3]/div/article/div/div[2]/div/div/div[2]/div[2]/div/div/a/div/time')))
+                except:
+                    self.text.run("{}번째 피드 업로드 시간 크롤링 실패".format(i + 1))
+                    self.open_url = False
+                    self.LogOut()
+                    self.re_start = True
+                    return 0
 
             self.date = element.accessible_name
             self.current_link = self.driver.current_url

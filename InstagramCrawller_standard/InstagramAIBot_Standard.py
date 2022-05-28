@@ -331,6 +331,23 @@ class MyWindow(QMainWindow, form_class):
                                     self.driver.refresh()
                                     time.sleep(10)
                                     try:
+                                        url = "https://www.instagram.com/explore/tags/{}/".format(self.target_word)
+                                        self.driver.get(url)
+                                        try:
+                                            wait = WebDriverWait(self.driver, 30).until(EC.presence_of_element_located((By.ID, 'react-root')))
+                                        except:
+                                            self.text.run("해시태그 검색에 실패했습니다.")
+                                            self.LogOut()
+                                            self.re_start = True
+                                            return 0
+                                        try:
+                                            wait = WebDriverWait(self.driver, 100).until(EC.presence_of_element_located((By.XPATH, '//*[@id="react-root"]/section/main')))
+                                        except:
+                                            self.text.run("해시태그 검색에 실패했습니다.")
+                                            self.LogOut()
+                                            self.re_start = True
+                                            return 0
+                                            
                                         self.ClickFeed()
                                         time.sleep(2)
                                         self.text.run("웹사이트 새로고침 후 재탐색 중.")
