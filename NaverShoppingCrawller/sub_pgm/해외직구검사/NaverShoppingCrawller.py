@@ -32,6 +32,9 @@ import openpyxl
 import shutil
 import subprocess
 import urllib.request
+import requests
+import json
+import re
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -64,7 +67,7 @@ class MyWindow(QMainWindow, form_class):
         self.cnt = 0
         self.setWindowIcon(QIcon('./driver/naver-icon-style-1-300x300.png'))    # UI에 Naver icon 설정
         self.run_btn.clicked.connect(self.Run)  # 검색 버튼 누르면 self.Run 함수 실행
-        self.process_delay = 3
+        self.process_delay = 1.5
         self.text = TextBrowser()               # UI에 text 출력 위한 객체
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
@@ -72,6 +75,7 @@ class MyWindow(QMainWindow, form_class):
         self.amt_review.clicked.connect(self.SetReviewType) # 리뷰 많은순
         self.good_review.clicked.connect(self.SetReviewType)# 리뷰 좋은순
         self.review_type = 0
+        self.view_item_cnt = 80
 
     # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
     def closeEvent(self, QCloseEvent): 
@@ -157,6 +161,7 @@ class MyWindow(QMainWindow, form_class):
 
     # 네이버쇼핑 크롤링 함수
     def CrawlData(self):
+        result_header = list(pd.read_excel('./driver/결과양식.xlsx'))
         ac = ActionChains(self.driver)  # 셀레니움 동작을 바인딩 하여 동작 할 수 있게 하는 모듈
         # 쇼핑 배너 클릭
         if self.restart == False:
@@ -203,9 +208,9 @@ class MyWindow(QMainWindow, form_class):
         WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#__next > div > div.style_container__1YjHN > div.style_inner__18zZX > div.style_content_wrap__1PzEo > div.style_content__2T20F > div.seller_filter_area > div.subFilter_sort_area__ZBnvs > div.subFilter_sort_choice__1SFXG > div.subFilter_select_box__1bM64.open > ul > li:nth-child(4)'))).click()
         time.sleep(2)
         # 금액 설정
-        start_price = self.start_price.text()
-        end_price = self.end_price.text()
-        if start_price != '' and end_price != '':
+        self.start_price_str = self.start_price.text()
+        self.end_price_str = self.end_price.text()
+        if self.start_price_str != '' and self.end_price_str != '':
             time.sleep(3)
             try:
                 start_price_tab = self.driver.find_element_by_css_selector('#__next > div > div.style_container__1YjHN > div.style_inner__18zZX > div.filter_finder__1Gtei > div > div.filter_finder_col__3ttPW.filter_finder_price__2UlfJ > div.finder_price_inner > div > span:nth-child(2) > input[type=text]')
@@ -222,8 +227,8 @@ class MyWindow(QMainWindow, form_class):
                     return 0
                 
             # 금액 설정란에 입력받은 금액 입력 후 엔터
-            ac.move_to_element(start_price_tab).click().pause(2).send_keys(start_price).pause(2).perform()
-            ac.move_to_element(end_price_tab).click().pause(2).send_keys(end_price).pause(2).perform()
+            ac.move_to_element(start_price_tab).click().pause(2).send_keys(self.start_price_str).pause(2).perform()
+            ac.move_to_element(end_price_tab).click().pause(2).send_keys(self.end_price_str).pause(2).perform()
             ac.move_to_element(search_price_btn).click().perform()
             time.sleep(self.process_delay)
 
@@ -252,216 +257,165 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(self.process_delay)
         
         # 페이지 끝까지 스크롤
-        # 윈도우의 첫 좌표 대비 끝 좌표를 비교하여 같을 때까지 스크롤바를 내리는 로직
-        before_h = self.driver.execute_script('return window.scrollY')
-        while(True):
-            self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
-            time.sleep(1)
-            after_h = self.driver.execute_script('return window.scrollY')
+        # # 윈도우의 첫 좌표 대비 끝 좌표를 비교하여 같을 때까지 스크롤바를 내리는 로직
+        # before_h = self.driver.execute_script('return window.scrollY')
+        # while(True):
+        #     self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
+        #     time.sleep(1)
+        #     after_h = self.driver.execute_script('return window.scrollY')
 
-            if after_h == before_h:
-                break
-            else:
-                before_h = after_h
-        # 현재 페이지에 나와 있는 아이템 테이블들의 정보를 받아오는 코드
-        items = self.driver.find_elements_by_css_selector('.basicList_info_area__17Xyo')
-        list_cnt = len(items)
+        #     if after_h == before_h:
+        #         break
+        #     else:
+        #         before_h = after_h
+
+        before_h = 0
+        after_h =0
         # 엑셀 파일에 담을 리스트 초기화
         wb = openpyxl.Workbook()
         sheet = wb.active
         #sheet.append(['상품명', '최저가', '스토어 갯수', '별점', '리뷰 갯수', '등록월', '스토어 링크'])
 #        sheet.append(['상품명', '최저가', '별점', '리뷰 갯수', '등록월', '스토어 링크'])    # 스토어 갯수가 없는 경우가 많아 크롤링 속도가 느려지는 경우가 많이 발생
-        sheet.append(['국내쇼핑몰이름', '국내쇼핑몰등급', '구매건수', '국내제품링크', '이미지이름', '이미지저장경로', '네이버카테고리', '국내사이트제목', '국내사이트태그',
-                      '리뷰수', '국내사이트가격', '국내사이트배송비'])
-
+        sheet.append(result_header)
+        previousItemList = []
+        now_time = datetime.datetime.now()
+        today = now_time.strftime('%Y%m%d')  #YYYY-MM-DD
+        rank_dict = {'M44001':'플래티넘', 'M44002':'프리미엄', 'M44003':'빅파워', 'M44004':'파워', 'M44005':'없음', 'M44006':'없음', 'M44007':'없음', 'M44008':'없음', 'M44009':'없음'}
         for i in range(self.count):
-            if i != 0:
-                # 페이지 끝까지 스크롤
-                before_h = self.driver.execute_script('return window.scrollY')
-                while(True):
-                    self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
-                    time.sleep(1)
-                    after_h = self.driver.execute_script('return window.scrollY') 
+#            if i != 0:
+#                self.driver.refresh()
+#                time.sleep(5)
+            # 페이지 끝까지 스크롤
+            before_h = self.driver.execute_script('return window.scrollY')
+            while(True):
+                self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
+                time.sleep(1)
+                after_h = self.driver.execute_script('return window.scrollY') 
 
-                    if after_h == before_h:
-                        break
-                    else:
-                        before_h = after_h
+                if after_h == before_h:
+                    break
+                else:
+                    before_h = after_h
 
-                items = self.driver.find_elements_by_css_selector('.basicList_info_area__17Xyo')
             idx = 0
             no_review = False
             # 각 아이템별 데이터 크롤링
-            for item in items:
-                multi_store = False
-                try:
-                    is_abroad = WebDriverWait(item, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.ad_label__Ve7Bp'))).text
-                except:
-                    idx += 1
-                    continue
-                # 리뷰 갯수
-                try:
-                    review = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_num__1yXM9'))).text
-                    review_cnt = int(review.replace(',','').replace("리뷰","").replace("별점",""))
-                except:
-                    review_cnt = 0
+            url = self.driver.current_url
+            headers = {
+                'authority': 'search.shopping.naver.com',
+                'accept': 'application/json, text/plain, */*',
+                'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+                'cache-control': 'no-cache',
+                # Requests sorts cookies= alphabetically
+                #'cookie': 'NNB=KE7HSLOVP2HWE; sus_val=wwt7vHRgRRrfnhDlgIWFQ840; autocomplete=use; AD_SHP_BID=6; spage_uid=',
+                'logic': 'PART',
+                'pragma': 'no-cache',
+                'Referer': url,
+                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="102", "Google Chrome";v="102"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
+            }
+            windows_user_name = os.path.expanduser('~')
 
+            self.store_name = []
+            self.store_rank = []
+            self.purchase_cnt = []
+            self.store_link = []
+            self.image_name = []
+            self.image_save_link = []
+            self.category = []
+            self.item_name = []
+            self.tag = []
+            self.review_cnt = []
+            self.price = []
+            self.delivery_fee = []
+            
+            time.sleep(1.5)
+            # 네이버를 향한 Request 생성 and 네이버로부터 response 받기
+            response = self.MakeRequestAndGetResponse(i+1, headers)
+            
+            # json을 리스트로 받기
+            itemList = json.loads(response.text)
+            idx = 0
+            for item in itemList['shoppingResult']['products']:
+                review_cnt = item['reviewCount']
                 if review_cnt == 0:
-                    self.text.run('{}페이지 {}번째 아이템에 리뷰가 없습니다.'.format(i + 1, idx + 1))
+                    self.text.run('{}페이지 {}번째 아이템 리뷰 없음'.format(i + 1, idx + 1))
                     no_review = True
                     break
-                # 아이템명
+                else:
+                    self.review_cnt.append(review_cnt)
+                shop_list = item['lowMallList']
+                if shop_list != None:
+                    store_name = []
+                    for d in range(len(shop_list)):
+                        temp = item['lowMallList'][d]['name']
+                        new_temp = self.CleanText(temp).replace(' ', '')
+                        store_name.append(new_temp)
+                    self.store_name.append(', '.join(store_name))
+                else:
+                    temp = item['mallName']
+                    new_temp = self.CleanText(temp).replace(' ', '')
+                    self.store_name.append(new_temp)
                 try:
-                    title = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_title__3P9Q7'))).text
+                    self.store_rank.append(rank_dict[item['mallInfoCache']['mallGrade']])
                 except:
-                    title = ''
-                # 최저가
-                try:
-                    min_price = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.price_num__2WUXn')))
-                    min_price = int(min_price.text.strip('원').replace(',', ''))
-                except:
-                    min_price = 0
+                    self.store_rank.append('없음')
+                self.purchase_cnt.append(item['purchaseCnt'])
+                self.store_link.append(item['mallProductUrl'])
+                
+                item_name = item['productName']
+                new_item_name = self.CleanText(item_name)
+                self.image_name.append(new_item_name.replace(' ','_'))
 
-                # 스토어 링크
-                store_link = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_link__1MaTN'))).get_attribute('href')
+                category_level = int(item['categoryLevel'])
+                category_temp = []
+                for n in range(category_level):
+                    category_temp.append(item['category{}Name'.format(n+1)])
+                self.category.append('>'.join(category_temp))
 
-                # # 등록월일
-                # reg_data_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[2]/div[5]/span[1]'.format(str(idx + 1))
-                # reg_date = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, reg_data_xpath))).text.split('등록일 ')[1]
-                # 국내쇼핑몰 이름
-                try:
-                    store_name_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/div[1]/a[1]'.format(str(idx + 1))
-                    store_name = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, store_name_xpath))).text
-                    if '쇼핑몰별 최저가' in store_name:
-                        multi_store = True
-                        store_list_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/ul'.format(str(idx + 1))
-                        store_list = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, store_list_xpath))).text.replace("네이버플러스멤버십","").replace("네이버페이","").split('\n')
-                        store_list = ' '.join(store_list).split()
-                        store_temp = []
-                        for ii in range(int(len(store_list) / 2)):
-                            store_temp.append(store_list[(ii * 2)])
-                        store_name = ', '.join(store_temp)
-                except:
-                    try:
-                        store_name_xpath = '//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/div[1]/a[1]'.format(str(idx + 1))
-                        store_name = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, store_name_xpath))).text
-                        if '쇼핑몰별 최저가' in store_name:
-                            multi_store = True
-                            store_list_xpath = '//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/ul'.format(str(idx + 1))
-                            store_list = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, store_list_xpath))).text.replace("네이버플러스멤버십","").replace("네이버페이","").split('\n')
-                            store_list = ' '.join(store_list).split()
-                            store_temp = []
-                            for ii in range(int(len(store_list) / 2)):
-                                store_temp.append(store_list[(ii * 2)])
-                            store_name = ', '.join(store_temp)
-                    except:
-                        store_name = ''
-                # 카테고리
-                try:
-                    category = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, '//*[@id="__next"]/div/div[2]/div[2]/div[2]/div/div[1]/div[2]'))).text.split('\n')
-                    category = ', '.join(category)
-                except:
-                    try:
-                        category = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, '//*[@id="__next"]/div/div[2]/div/div[2]/div[1]/div[1]/div[2]'))).text.split('\n')
-                        category = ', '.join(category)
-                    except:
-                        category = '없음'
-                # 구매건수
-                try:
-                    cell_cnt_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[2]/div[5]/a[2]'.format(str(idx + 1))
-                    cell_cnt = int(WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, cell_cnt_xpath))).text.replace("구매건수","").replace(",",""))
-                except:
-                    try:
-                        cell_cnt_xpath = '//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[2]/div[5]/a[2]'.format(str(idx + 1))
-                        cell_cnt = int(WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, cell_cnt_xpath))).text.replace("구매건수","").replace(",",""))
-                    except:
-                        cell_cnt = 0
-                # 태그
-                tag = []
-                tag_idx = 1
-                while True:
-                    try:
-                        tag_temp = self.driver.find_element_by_xpath('//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[2]/div[3]/span[{}]'.format(str(idx + 1), tag_idx)).text
-                        tag.append(tag_temp)
-                        tag_idx += 1
-                    except:
-                        try:
-                            tag_temp = self.driver.find_element_by_xpath('//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[2]/div[3]/span[{}]'.format(str(idx + 1), tag_idx)).text
-                            tag.append(tag_temp)
-                            tag_idx += 1
-                        except:
-                            break
-                tag = ' > '.join(tag)
+                self.item_name.append(new_item_name)
+                self.tag.append(item['manuTag'])
+                self.price.append(item['lowPrice'])
+                self.delivery_fee.append(item['deliveryFeeContent'])
 
-                # 이미지 저장
-                try:
-                    img = self.driver.find_element_by_xpath('//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[1]/div/a/img'.format(str(idx + 1)))
-                    img_url = img.get_attribute('src')
-                except:
-                    img = self.driver.find_element_by_xpath('//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[1]/div/a/img'.format(str(idx + 1)))
-                    img_url = img.get_attribute('src')
+                # 이미지 파일 저장
+                img_url = item['imageUrl']
+                img_folder = '{}\\Desktop\\{}_네이버'.format(windows_user_name, today)
+                if ', ' in self.store_name[idx]:
+                    sub_img_folder = '{}\\Desktop\\{}_네이버\\{}'.format(windows_user_name, today, self.store_name[idx].split(', ')[0])
+                else:
+                    sub_img_folder = '{}\\Desktop\\{}_네이버\\{}'.format(windows_user_name, today, self.store_name[idx])
+                self.image_save_link.append(sub_img_folder + '\\' + self.image_name[idx] + '.jpg')
 
-                img_folder = './Image'
-                img_name = '{}/{}_{}_{}_image'.format(img_folder, i + 1, idx + 1, self.target_word.replace('/',''))
                 try:
                     if not os.path.isdir(img_folder):
                         os.mkdir(img_folder)
+                    if not os.path.isdir(sub_img_folder):
+                        os.mkdir(sub_img_folder)
                 except OSError:
                     self.text.run('이미지 폴더를 생성하는데 실패했습니다.')
-                    return 0
-                t = urllib.request.urlretrieve(img_url, img_name + ".jpg" )
-
-                if multi_store != True:
-                    # 국내쇼핑몰 등급
-                    try:
-                        store_rank_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/div[2]/span'.format(str(idx + 1))
-                        store_rank = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, store_rank_xpath))).text
-                    except:
-                        try:
-                            store_rank_xpath = '//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/div[2]/span'.format(str(idx + 1))
-                            store_rank = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, store_rank_xpath))).text
-                        except:
-                            store_rank = '없음'
-                    # 배송비
-                    try:
-                        delivery_fee_xpath = '//*[@id="__next"]/div/div[2]/div[2]/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/ul/li[2]/em'.format(str(idx + 1))
-                        delivery_fee = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, delivery_fee_xpath))).text.replace("배송비 ","")
-                    except:
-                        try:
-                            delivery_fee_xpath = '//*[@id="__next"]/div/div[2]/div/div[3]/div[1]/ul/div/div[{}]/li/div/div[3]/ul/li[2]/em'.format(str(idx + 1))
-                            delivery_fee = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.XPATH, delivery_fee_xpath))).text.replace("배송비 ","")
-                        except:
-                            delivery_fee = '알수없음'
-                else:
-                    store_rank = '없음'
-                    delivery_fee = '알수없음'
-
-                # # 별점
-                # try:
-                #     review_score = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_star__3NkBn')))
-                #     review_score = review_score.text
-                # except:
-                #     review_score = 0
-                # 스토어 갯수
-                # try:
-                #     store_cnt = WebDriverWait(item, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.basicList_compare__3AjuT')))
-                #     store_cnt = int(store_cnt.text.split('판매처 ')[1])
-                # except:
-                #     store_cnt = 1
+                    break
+                t = urllib.request.urlretrieve(img_url, self.image_save_link[idx])
 
                 # 크롤링 결과 엑셀로 저장
                 current_path = os.getcwd()
                 now_time = datetime.datetime.now()
                 now_date = now_time.strftime('%Y-%m-%d') + '_'  #YYYY-MM-DD
-                #sheet.append([title, min_price, store_cnt, review_score, review_cnt, reg_date, store_link])
-                #sheet.append([title, min_price, review_score, review_cnt, reg_date, store_link])
-                sheet.append([store_name, store_rank, cell_cnt, store_link, img_name, img_folder, category, title, tag, review_cnt, min_price, delivery_fee])
+                sheet.append([self.store_name[idx], self.store_rank[idx], self.purchase_cnt[idx], self.store_link[idx], self.image_name[idx], 
+                              self.image_save_link[idx], self.category[idx], self.item_name[idx], self.tag[idx], self.review_cnt[idx], 
+                              self.price[idx], self.delivery_fee[idx]])
                 wb.save("{}\\".format(current_path) + now_date + self.target_word.replace('/','') + "_results.xlsx")
 
                 self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(i + 1, idx + 1))
 
                 idx += 1
-                
+            
+            time.sleep(self.process_delay)
             self.text.run('{}페이지 크롤링 완료!'.format(i + 1))
             if no_review == True:
                 break
@@ -470,6 +424,17 @@ class MyWindow(QMainWindow, form_class):
                 self.driver.find_element_by_css_selector('.pagination_next__1ITTf').click()
                 time.sleep(self.process_delay)
 
+            # 반복 응답 Check Method
+            # 응답이 같은 값으로 반복되었는지 확인하는 메서드를 실행한다. True일 경우 중복이라서 break
+            if i == 0:
+                previousItemList = itemList
+                continue
+
+            if self.isRepeat(previousItemList, itemList):
+                break
+            
+            previousItemList = itemList
+                
         # 크롬드라이버 종료
         self.end_time = self.text.GetTime()
         diff_time = self.end_time - self.start_time
@@ -478,6 +443,43 @@ class MyWindow(QMainWindow, form_class):
         self.restart = True
         return 1
     
+    def isRepeat(self, previousItemList, itemList) :
+    
+        #같은 값을 응답받으면 True 리턴
+        if previousItemList['shoppingResult']['products'][0]['productName'] == itemList['shoppingResult']['products'][0]['productName']:
+            self.text.run('중복된 페이지 크롤링을 시도했습니다. 크롤링을 종료합니다.')
+            return True
+        #아니면 False 리턴
+        return False
+
+    def MakeRequestAndGetResponse(self, number, headers) :
+        pageingIndex = number
+
+        params = {
+            'sort':'review',
+            'pagingIndex': pageingIndex,
+            'pagingSize': 80,
+            'viewType': 'list',
+            'productSet': 'overseas',
+            'deliveryFee': '',
+            'deliveryTypeValue': '',
+            'frm': 'NVSHPRC',
+            'query': self.target_word,
+            'iq': '',
+            'eq': '',
+            'xq': '',
+            'minPrice': self.start_price_str,
+            'maxPrice': self.end_price_str,
+        }
+
+        response = requests.get('https://search.shopping.naver.com/api/search/all', headers=headers, params=params)
+
+        return response
+
+    def CleanText(self, inputString):
+        text_rmv = re.sub('[-=+,#/\?:^.@*\"※~ㆍ!』‘|\(\)\[\]`\'…》\”\“\’·]', ' ', inputString)
+        return text_rmv
+
     # 리뷰 타입 선택
     def SetReviewType(self):
         if self.amt_review.isChecked():
