@@ -219,26 +219,30 @@ class MyWindow(QMainWindow, form_class):
         weekday = datetime.datetime.strptime(str_date_time, '%Y-%m-%d').weekday()
         today_week = self.get_week_no(now.year, now.month, now.day)
         selected_week = self.get_week_no(self.cal_date.year(), self.cal_date.month(), self.cal_date.day())
-        week_delta = abs(today_week - selected_week)
-
-        if week_delta >= 2 and now.month != self.cal_date.month():
+        week_delta = abs(selected_week - today_week)
+        month_delta = self.cal_date.month() - now.month
+        if week_delta >= 2 and month_delta < 0:
             self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 아닙니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
             time.sleep(1)
             return 0
             
         target_date = next_month_date_dict[weekday]
         find_date = self.date_dict[target_date]
-        if today_week < selected_week:
-            if week_delta == 1:
-                target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[4]/td[{}]'.format(find_date)
-            elif week_delta == 2:
-                target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[5]/td[{}]'.format(find_date)
-        elif today_week == selected_week:
-            target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[3]/td[{}]'.format(find_date)
-        else:
-            self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 지났습니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
-            time.sleep(1)
-            return 0
+        if month_delta == 0:
+            if today_week < selected_week:
+                if week_delta == 1:
+                    target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[4]/td[{}]'.format(find_date)
+                elif week_delta == 2:
+                    target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[5]/td[{}]'.format(find_date)
+            elif today_week == selected_week:
+                target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[3]/td[{}]'.format(find_date)
+            else:
+                self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 지났습니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
+                time.sleep(1)
+                return 0
+        elif month_delta == 1:
+            target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[{}]/td[{}]'.format(selected_week + 2, find_date)
+            
 #        target_xpath = '/html/body/table/tbody/tr[1]/td[2]/table/tbody/tr[3]/td[3]'
         
         try:
@@ -250,39 +254,57 @@ class MyWindow(QMainWindow, form_class):
 
         date = re.findall(r'\d+', clicked_date)
         if len(date) == 0:
-            self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 지났습니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
+            self.text.run('선택하신 날짜 {}년 {}월 {}일은 예약할 수 있는 날짜가 아닙니다.'.format(self.cal_date.year(), self.cal_date.month(), self.cal_date.day()))
             time.sleep(1)
             return 0
 
         self.text.run('타겟 예약 날짜 : {}월 {}일 {}'.format(date[0], date[1], target_date))
-        time.sleep(0.5)
+#        time.sleep(0.5)
+        get_table = False
+        get_table_cnt = 0
         # 캘린더에서 타겟 날짜 선택
-        try:
-            target_button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, target_xpath + '/div')))
-            click_btn = target_button.click()
+        while True:
             try:
-                WebDriverWait(self.driver, 1).until(EC.alert_is_present())
-                alert = Alert(self.driver)
-                message = alert.text
-                alert.accept()
+                target_button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, target_xpath + '/div')))
+                click_btn = target_button.click()
+                try:
+                    WebDriverWait(self.driver, 0.5).until(EC.alert_is_present())
+                    alert = Alert(self.driver)
+                    message = alert.text
+                    alert.accept()
+                    if '지금은 예약시간이 아닙니다' in message:
+                        if get_table_cnt == 200:
+                            self.text.run('지금은 예약시간이 아닙니다. 예약시간은 10시 부터 17시 까지 입니다.')
+                            return 0
+                        else:
+                            get_table_cnt += 1
+                            self.driver.refresh()
+                            time.sleep(0.5)
+                            continue
+                    elif '해당날짜는 예약이 완료되었습니다' in message:
+                        self.text.run('해당날짜는 예약이 완료되었습니다')
+                        return 0
+                except:
+                    message = ''
+                    pass
+                try:
+                    table = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'body > table')))
+                    get_table = True
+                except:
+                    self.driver.refresh()
+                    time.sleep(0.5)
+                    continue
             except:
-                message = ''
-                pass
-        except:
-            self.text.run('아직 예약할 수 있는 날짜가 아닙니다.')
-            time.sleep(1)
-#            self.driver.quit()
-            return 0
+                self.text.run('아직 예약할 수 있는 날짜가 아닙니다.')
+                time.sleep(1)
+                return 0
+            
+            if get_table == True:
+                break
+            
+            else:
+                continue
 
-        if '지금은 예약시간이 아닙니다' in message:
-            self.text.run('지금은 예약시간이 아닙니다. 예약시간은 10시 부터 17시 까지 입니다.')
-#            self.driver.quit()
-            return 0
-        
-        elif '해당날짜는 예약이 완료되었습니다' in message:
-            self.text.run('해당날짜는 예약이 완료되었습니다')
-            return 0
-        
         # 에덴~밸리코스까지 UI에 세팅된 시작/종료 시간 사이 시간대로 예약 시작
         course_id = [1, 2]
         target_start_time = self.start_time_combo.currentText()
@@ -517,12 +539,12 @@ class MyWindow(QMainWindow, form_class):
 
         self.text.run('주말 자동 예약 설정 완료. 오전 9시 58분 경 URL 오픈 및 로그인 예정')
         self.text.run('주말 자동 예약 설정 완료. 오전 9시 59분 30초 경 예약 화면 진입 예정')
-        self.text.run('주말 자동 예약 설정 완료. 오전 10시 00분 경 새로고침 후 예약 시작 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오전 9시 59분 50초 경 예약 시작 예정')
 
         self.job1 = schedule.every().day.at('09:58').do(self.AutoLogin)
         self.job2 = schedule.every().day.at('09:59:30').do(self.EnterReservePage)
-        self.job3 = schedule.every().day.at('10:00:00').do(self.RefreshWeb)
-        self.job4 = schedule.every().day.at('10:00:02').do(self.DoReserve)
+#        self.job3 = schedule.every().day.at('10:00:00').do(self.RefreshWeb)
+        self.job4 = schedule.every().day.at('09:59:50').do(self.DoReserve)
 
         # self.job1 = schedule.every().day.at('02:45').do(self.AutoLogin)
         # self.job2 = schedule.every().day.at('02:45:30').do(self.EnterReservePage)
@@ -539,12 +561,12 @@ class MyWindow(QMainWindow, form_class):
 
         self.text.run('평일 자동 예약 설정 완료. 오전 9시 58분 경 URL 오픈 및 로그인 예정')
         self.text.run('평일 자동 예약 설정 완료. 오전 9시 59분 30초 경 예약 화면 진입 예정')
-        self.text.run('평일 자동 예약 설정 완료. 오전 10시 00분 경 새로고침 후 예약 시작 예정')
+        self.text.run('평일 자동 예약 설정 완료. 오전 90시 59분 50초 경 예약 시작 예정')
 
         self.job5 = schedule.every().day.at('09:58').do(self.AutoLogin)
         self.job6 = schedule.every().day.at('09:59:30').do(self.EnterReservePage)
-        self.job7 = schedule.every().day.at('10:00:00').do(self.RefreshWeb)
-        self.job8 = schedule.every().day.at('10:00:02').do(self.DoReserve)
+#        self.job7 = schedule.every().day.at('10:00:00').do(self.RefreshWeb)
+        self.job8 = schedule.every().day.at('09:59:50').do(self.DoReserve)
 
         # self.job5 = schedule.every().day.at('02:41').do(self.AutoLogin)
         # self.job6 = schedule.every().day.at('02:41:30').do(self.EnterReservePage)
@@ -566,7 +588,7 @@ class MyWindow(QMainWindow, form_class):
             self.exit_event_th1 = True
             schedule.cancel_job(self.job1)
             schedule.cancel_job(self.job2)
-            schedule.cancel_job(self.job3)
+#            schedule.cancel_job(self.job3)
             schedule.cancel_job(self.job4)
             t.join()
             self.th1.join()
@@ -578,7 +600,7 @@ class MyWindow(QMainWindow, form_class):
             self.exit_event_th2 = True
             schedule.cancel_job(self.job5)
             schedule.cancel_job(self.job6)
-            schedule.cancel_job(self.job7)
+#            schedule.cancel_job(self.job7)
             schedule.cancel_job(self.job8)
             t.join()
             self.th2.join()
