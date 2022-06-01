@@ -561,7 +561,7 @@ class MyWindow(QMainWindow, form_class):
 
         self.text.run('평일 자동 예약 설정 완료. 오전 9시 58분 경 URL 오픈 및 로그인 예정')
         self.text.run('평일 자동 예약 설정 완료. 오전 9시 59분 30초 경 예약 화면 진입 예정')
-        self.text.run('평일 자동 예약 설정 완료. 오전 90시 59분 50초 경 예약 시작 예정')
+        self.text.run('평일 자동 예약 설정 완료. 오전 9시 59분 50초 경 예약 시작 예정')
 
         self.job5 = schedule.every().day.at('09:58').do(self.AutoLogin)
         self.job6 = schedule.every().day.at('09:59:30').do(self.EnterReservePage)
