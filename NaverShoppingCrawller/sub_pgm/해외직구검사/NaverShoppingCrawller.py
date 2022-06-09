@@ -169,7 +169,7 @@ class MyWindow(QMainWindow, form_class):
             shopping_btn = self.driver.find_element_by_xpath('//*[@id="NM_FAVORITE"]/div[1]/ul[1]/li[5]/a').click()
         try:
             # 쇼핑 페이지로 잘 넘어왔는지 체크하는 코드
-            element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#_verticalGnbModule > div > div > div._gnb_header_shop_Xd6Hq > div > h1 > a')))
+            element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#_verticalGnbModule > div > div._header_header_REoTl > div > div._gnb_header_shop_Xd6Hq > div > div._gnbSearch_search_area_3LAyd > form > fieldset > div > input')))
         except:
             self.text.run('네이버 쇼핑 URL open에 실패했습니다.')
             self.driver.quit()
@@ -177,8 +177,8 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(self.process_delay)
         # 검색창
         try:
-            search_tab = self.driver.find_element_by_css_selector('#_verticalGnbModule > div > div > div._gnb_header_shop_Xd6Hq > div > div._gnbSearch_search_area_3LAyd > form > fieldset > div > input')
-        except:
+            search_tab = self.driver.find_element_by_css_selector('#_verticalGnbModule > div > div._header_header_REoTl > div > div._gnb_header_shop_Xd6Hq > div > div._gnbSearch_search_area_3LAyd > form > fieldset > div > input')
+        except:                                                    
             self.text.run('검색에 실패했습니다.')
             self.restart = True
             return 0
