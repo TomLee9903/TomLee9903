@@ -260,14 +260,22 @@ class MyWindow(QMainWindow, form_class):
 
 #        target_xpath = '//*[@id="ctl00_ContentPlaceHolder1_upPanel"]/div[2]/div/div[1]/div/table/tbody/tr[5]/td[2]/a' ## temp
         
-        clicked_date = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, target_xpath))).text
-        date = re.findall(r'\d+', clicked_date)
-        self.text.run('타겟 예약 날짜 : {}월 {}일 {}'.format(month, date[0], target_date))
-        if '-' in clicked_date:
-            self.text.run('아직 예약 가능한 날짜가 아닙니다.')
-            time.sleep(3)
-#            self.driver.quit()
-            return 0
+        loop_idx = 0
+        while True:
+            clicked_date = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, target_xpath))).text
+            date = re.findall(r'\d+', clicked_date)
+            if loop_idx == 0:
+                self.text.run('타겟 예약 날짜 : {}월 {}일 {}'.format(month, date[0], target_date))
+            if '-' in clicked_date:
+                if loop_idx == 20:
+                    self.text.run('아직 예약 가능한 날짜가 아닙니다.')
+                    time.sleep(3)
+                    return 0
+                else:
+                    self.RefreshWeb()
+                    loop_idx += 1
+            else:
+                break
 
         # 캘린더에서 타겟 날짜 선택
         try:            
@@ -283,14 +291,10 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(1.5)
         except:
             self.text.run('선택하신 날짜 {}월 {}일은 예약이 마감되었습니다.'.format(month, date[0]))
-            time.sleep(3)
-#            self.driver.quit()
             return 0
 
         if '선택하신 날짜는 예약이 마감되었습니다.' in message:
             self.text.run('선택하신 날짜 {}월 {}일은 예약이 마감되었습니다.'.format(month, date[0]))
-            time.sleep(3)
-#            self.driver.quit()
             return 0
 
         # 페이지 끝까지 스크롤
@@ -482,8 +486,8 @@ class MyWindow(QMainWindow, form_class):
                 captcha_block = self.driver.find_element_by_css_selector('#ctl00_ContentPlaceHolder1_txtConfirmNumber')
                 final_reserve = self.driver.find_element_by_css_selector('#ctl00_ContentPlaceHolder1_lbtOK')
                 self.act.send_keys_to_element(captcha_block, text).click(final_reserve).perform()
-        #        self.act.send_keys_to_element(captcha_block, text).perform()
-#                self.act.click(final_reserve).perform()
+                #self.act.send_keys_to_element(captcha_block, text).perform()
+                #self.act.click(final_reserve).perform()
                 time.sleep(0.5)
                 try:
                     result = WebDriverWait(self.driver, 0.3).until(EC.alert_is_present())
@@ -580,11 +584,12 @@ class MyWindow(QMainWindow, form_class):
     def EnterReservePage(self):
         # 실시간 예약 버튼 누르기
         reservation_btn = self.driver.find_element_by_xpath('//*[@id="Image1"]').click()
+        time.sleep(5)
         try:
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#aspnetForm > div.mainContainer > div.cntContainer > h3')))
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#aspnetForm > div.mainContainer > div.cntContainer > h3')))
         except:
             self.text.run('예약 화면인지 확인 바람')
-            self.driver.quit()
+#            self.driver.quit()
             return 0
         self.text.run('실시간 예약 화면으로 enter 성공!')
 
@@ -594,19 +599,16 @@ class MyWindow(QMainWindow, form_class):
 
     def ScheduleLoginForWeekend(self):
         self.text.run('주말 자동 예약 설정 완료. 오후 1시 58분 경 URL 오픈 예정')
-        self.text.run('주말 자동 예약 설정 완료. 오후 1시 59분 30초 경 실시간예약 페이지 진입 예정')
-        self.text.run('주말 자동 예약 설정 완료. 오후 1시 59분 59초 경 웹페이지 새로고침 예정')
-        self.text.run('주말 자동 예약 설정 완료. 오후 2시 00분부터 예약시작 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오후 1시 58분 30초 경 실시간예약 페이지 진입 예정')
+        self.text.run('주말 자동 예약 설정 완료. 오후 1시 59분 50초부터 예약시작 예정')
 
         self.job1 = schedule.every().day.at('13:58').do(self.AutoLogin)
-        self.job2 = schedule.every().day.at('13:59:30').do(self.EnterReservePage)
-        self.job3 = schedule.every().day.at('13:59:59').do(self.RefreshWeb)
-        self.job4 = schedule.every().day.at('14:00:00').do(self.DoReserve)
-
-        # self.job1 = schedule.every().monday.at('01:30').do(self.AutoLogin)
-        # self.job2 = schedule.every().monday.at('01:30:30').do(self.EnterReservePage)
-        # self.job3 = schedule.every().monday.at('01:30:59').do(self.RefreshWeb)
-        # self.job4 = schedule.every().monday.at('01:31:00').do(self.DoReserve)
+        self.job2 = schedule.every().day.at('13:58:30').do(self.EnterReservePage)
+        self.job3 = schedule.every().day.at('13:59:50').do(self.DoReserve)
+        
+        # self.job1 = schedule.every().day.at('14:06').do(self.AutoLogin)
+        # self.job2 = schedule.every().day.at('14:06:30').do(self.EnterReservePage)
+        # self.job3 = schedule.every().day.at('14:07:50').do(self.DoReserve)
 
         while True:
             if self.exit_event_th1 == True:
@@ -616,14 +618,12 @@ class MyWindow(QMainWindow, form_class):
 
     def ScheduleLoginForWeek(self):
         self.text.run('평일 자동 예약 설정 완료. 오전 8시 58분 경 URL 오픈 예정')
-        self.text.run('평일 자동 예약 설정 완료. 오전 8시 59분 30초 경 실시간예약 페이지 진입 예정')
-        self.text.run('평일 자동 예약 설정 완료. 오전 8시 59분 59초 경 웹페이지 새로고침 예정')
-        self.text.run('평일 자동 예약 설정 완료. 오전 9시 00분부터 예약시작 예정')
+        self.text.run('평일 자동 예약 설정 완료. 오전 8시 58분 30초 경 실시간예약 페이지 진입 예정')
+        self.text.run('평일 자동 예약 설정 완료. 오전 8시 59분 50초부터 예약시작 예정')
 
-        self.job5 = schedule.every().day.at('08:58').do(self.AutoLogin)
-        self.job6 = schedule.every().day.at('08:59:30').do(self.EnterReservePage)
-        self.job7 = schedule.every().day.at('08:59:59').do(self.RefreshWeb)
-        self.job8 = schedule.every().day.at('09:00:00').do(self.DoReserve)
+        self.job4 = schedule.every().day.at('08:58').do(self.AutoLogin)
+        self.job5 = schedule.every().day.at('08:58:30').do(self.EnterReservePage)
+        self.job6 = schedule.every().day.at('08:59:50').do(self.DoReserve)
 
         # self.job5 = schedule.every().monday.at('01:31').do(self.AutoLogin)
         # self.job6 = schedule.every().monday.at('01:31:30').do(self.EnterReservePage)
@@ -646,7 +646,6 @@ class MyWindow(QMainWindow, form_class):
             schedule.cancel_job(self.job1)
             schedule.cancel_job(self.job2)
             schedule.cancel_job(self.job3)
-            schedule.cancel_job(self.job4)
             t.join()
             self.th1.join()
         self.text.run('주말 자동 예약 설정 해제')
@@ -655,10 +654,9 @@ class MyWindow(QMainWindow, form_class):
     def WeekCanceljob(self):
         for t in self.thread_list2:
             self.exit_event_th2 = True
+            schedule.cancel_job(self.job4)
             schedule.cancel_job(self.job5)
             schedule.cancel_job(self.job6)
-            schedule.cancel_job(self.job7)
-            schedule.cancel_job(self.job8)
             t.join()
             self.th2.join()
         self.text.run('평일 자동 예약 설정 해제')
