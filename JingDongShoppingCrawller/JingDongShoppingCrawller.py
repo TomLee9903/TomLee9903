@@ -188,7 +188,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22071709')
+        self.text.run('PGM ver : 22073013')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -321,7 +321,13 @@ class MyWindow(QMainWindow, form_class):
             if self.auto_login == True or (self.restart == True and self.login_done == True):
                 try:
                     while loop < 100:
-                        captcha_png = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#JDJRV-wrap-loginsubmit > div > div > div > div.JDJRV-img-panel.JDJRV-click-bind-suspend > div.JDJRV-img-wrap > div.JDJRV-bigimg > img'))).get_attribute('src')
+                        try:
+                            captcha_png = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#JDJRV-wrap-loginsubmit > div > div > div > div.JDJRV-img-panel.JDJRV-click-bind-suspend > div.JDJRV-img-wrap > div.JDJRV-bigimg > img'))).get_attribute('src')
+                        except:
+                            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#key')))
+                            self.login_done = True
+                            return 1
+
                         t = urllib.request.urlretrieve(captcha_png, path + '/driver/captcha.png')
                         img_ori = cv2.imread(path + '/driver/captcha.png', 0)
         #                img_gray = cv2.cvtColor(img_ori, cv2.COLOR_BGR2GRAY) # 배경이미지를 흑백으로 변환
@@ -530,7 +536,7 @@ class MyWindow(QMainWindow, form_class):
                 #ret.append(ret_temp/np.sum(query))
             # 교차분석값이 가장 큰 인덱스 클릭
             self.sub_idx = 0
-            while self.sub_idx < 5:
+            while self.sub_idx < 1:
                 self.tb_temp['국내쇼핑몰이름'][self.idx] = self.tb['국내쇼핑몰이름'][self.i]
                 self.tb_temp['국내쇼핑몰등급'][self.idx] = self.tb['국내쇼핑몰등급'][self.i]
                 self.tb_temp['구매건수'][self.idx] = self.tb['구매건수'][self.i]
@@ -649,13 +655,14 @@ class MyWindow(QMainWindow, form_class):
                 else:
                     detail_imgs = '\n'.join(detail_imgs)
                 
+                option1_list = []
+                option1_total = []
+                prices = []
                 if self.skip_option == False:
                     # 옵션1
                     self.only_one = False
                     self.no_crawl = False
-                    option1_list = []
-                    option1_total = []
-                    prices = []
+
                     try:
                         option1_total, option1_list, prices = self.GetOption1()
                         if self.no_crawl == True:
@@ -796,7 +803,7 @@ class MyWindow(QMainWindow, form_class):
             try:
                 time.sleep(2)
                 temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
-                self.ac.move_to_element(temp).pause(2).click().perform()
+                self.ac.move_to_element(temp).pause(0.5).click().perform()
                 time.sleep(1)
             except:
                 try:
@@ -895,13 +902,14 @@ class MyWindow(QMainWindow, form_class):
                     continue
             else:
                 detail_imgs = '\n'.join(detail_imgs)
-
+            
+            option1_list = []
+            option1_total = []
+            prices = []
             if self.skip_option == False:
                 # 옵션1
                 self.only_one = False
-                option1_list = []
-                option1_total = []
-                prices = []
+
                 try:
                     option1_total, option1_list, prices = self.GetOption1()
                     if self.only_one == True:
@@ -939,7 +947,7 @@ class MyWindow(QMainWindow, form_class):
                                 continue
                             else:
                                 pass
-                
+            
             self.tb_temp[self.columns[12]][self.idx] = self.search_url
             self.tb_temp[self.columns[13]][self.idx] = select_url
             if self.price == "暂无报价":
@@ -948,18 +956,26 @@ class MyWindow(QMainWindow, form_class):
                 self.tb_temp[self.columns[14]][self.idx] = '{}-{}'.format(min(prices), max(prices))
             else:
                 self.tb_temp[self.columns[14]][self.idx] = float(self.price)
-            self.tb_temp[self.columns[15]][self.idx] = title
+            self.tb_temp[self.columns[15]][self.idx] = title + '({})'.format(self.translated_name)
             self.tb_temp[self.columns[16]][self.idx] = img_url
             self.tb_temp[self.columns[20]][self.idx] = detail_imgs
             
             file_folder = '{}\\Desktop\\징동닷컴_결과물'.format(self.windows_user_name)
+            print(file_folder)
             filename = '{}\\{}'.format(file_folder, self.item_name.text() + '_JD_ItemName_results.xlsx')
             try:
                 if not os.path.isdir(file_folder):
                     os.mkdir(file_folder)
             except OSError:
-                self.text.run('파일 폴더를 생성하는데 실패했습니다.')
-                break
+                try:
+                    file_folder = '{}\\OneDrive\\Desktop\\징동닷컴_결과물'.format(self.windows_user_name)
+                    filename = '{}\\{}'.format(file_folder, self.item_name.text() + '_JD_ItemName_results.xlsx')
+                    if not os.path.isdir(file_folder):
+                        os.mkdir(file_folder)
+                except:
+                    self.text.run('파일 폴더를 생성하는데 실패했습니다.')
+                    print(self.windows_user_name)
+                    break
             self.tb_temp.to_excel(filename, index=False)
             
             if len(self.driver.window_handles) != 1:
@@ -1244,27 +1260,29 @@ class MyWindow(QMainWindow, form_class):
 
         # 이미지 넣어주기
         self.image_path = self.image_path_tb[self.i].split(self.image_name_tb[self.i])[0]
+        file_path = pag.locateCenterOnScreen('./driver/filepath.PNG', confidence=0.5)
 
         win = gw.getWindowsWithTitle('Chrome')[0] # 윈도우 타이틀에 Chrome 이 포함된 모든 윈도우 수집, 리스트로 리턴
         if win.isActive == False:
             pywinauto.application.Application().connect(handle=win._hWnd).top_window().set_focus()
         win.activate() #윈도우 활성화
         time.sleep(self.process_delay)
-        pag.click(win.left + 574, win.top + 65) # 해당 윈도우의 path 클릭
+        pag.click(win.left + file_path.x, win.top + file_path.y) # 해당 윈도우의 path 클릭
         time.sleep(self.process_delay)
         pyperclip.copy(self.image_path)
         pag.hotkey('ctrl', 'v')
         time.sleep(self.process_delay)
         pag.press('enter')
-        open_btn = pag.locateCenterOnScreen('./driver/open.PNG', confidence=0.6)
 
-        pag.click(win.left + 352, win.top + 530) # 해당 윈도우의 파일 이름 클릭
-        pyperclip.copy(self.image_name_tb[self.i] + '.jpg') 
+        pag.click(win.left + file_path.x, win.top + file_path.y) # 해당 윈도우의 파일 이름 클릭
+        pag.press('del')
+        pyperclip.copy(self.image_name_tb[self.i] + '.jpg')
         time.sleep(self.process_delay)
         pag.hotkey('ctrl', 'v')
 
         time.sleep(self.process_delay)
-        pag.click(win.left + open_btn.x, win.top + open_btn.y) # 해당 윈도우의 열기 클릭
+        #pag.click(win.left + open_btn.x, win.top + open_btn.y) # 해당 윈도우의 열기 클릭
+        pag.press('enter')
 
     def isRepeat(self, previousItemList, itemList) :
     
