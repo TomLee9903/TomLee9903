@@ -127,22 +127,6 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="page_cnt">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>11</pointsize>
-          </font>
-         </property>
-         <property name="echoMode">
-          <enum>QLineEdit::Normal</enum>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLineEdit" name="item_name">
          <property name="enabled">
@@ -171,10 +155,33 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="2" rowspan="2">
-        <widget class="QCheckBox" name="auto_translate">
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="page_cnt">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>11</pointsize>
+          </font>
+         </property>
+         <property name="echoMode">
+          <enum>QLineEdit::Normal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QCheckBox" name="item_translate_btn">
          <property name="text">
-          <string>자동 번역 사용</string>
+          <string>상품명 번역</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QCheckBox" name="option_translate_btn">
+         <property name="text">
+          <string>옵선명 번역</string>
          </property>
         </widget>
        </item>
