@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>675</width>
-    <height>641</height>
+    <width>773</width>
+    <height>643</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -95,6 +95,13 @@
           <widget class="QCheckBox" name="no_option">
            <property name="text">
             <string>No-option</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QCheckBox" name="auto_translate_btn">
+           <property name="text">
+            <string>옵션명 번역</string>
            </property>
           </widget>
          </item>
@@ -194,7 +201,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>675</width>
+     <width>773</width>
      <height>26</height>
     </rect>
    </property>

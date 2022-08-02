@@ -37,6 +37,7 @@ import requests
 import json
 import re
 import tkinter
+import googletrans as google
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -81,12 +82,14 @@ class MyWindow(QMainWindow, form_class):
         self.sku_id = []
         self.translate = False
         self.arrange = 0
+        self.translator = google.Translator()
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
         self.order_btn.clicked.connect(self.SetArrange)
         self.accuracy_btn.clicked.connect(self.SetArrange)
         self.no_option.clicked.connect(self.SetOptionCollect)
+        self.auto_translate_btn.clicked.connect(self.SetAutoTranslate)
 
     # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
     def closeEvent(self, QCloseEvent): 
@@ -130,7 +133,7 @@ class MyWindow(QMainWindow, form_class):
         return ret
 
     def SetAutoTranslate(self):
-        if self.auto_translate.isChecked():
+        if self.auto_translate_btn.isChecked():
             self.translate = True
         else:
             self.translate = False
@@ -138,7 +141,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22073101')
+        self.text.run('PGM ver : 22073102')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -280,7 +283,7 @@ class MyWindow(QMainWindow, form_class):
             self.final_cnt = 0
         
         self.search_url = self.driver.current_url
-        self.translated_name = self.TranslateChinese(self.item_name.text())
+        self.translated_name = self.TranslateGoogle(self.item_name.text(), 'zh-cn')
         
         time.sleep(1)
         # 별 4개 이상 버튼 클릭
@@ -533,13 +536,21 @@ class MyWindow(QMainWindow, form_class):
         for i in range(len(temp)):
             if i == len(temp) - 1:
                 last_img = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({}) > div > img'.format(i+1)).get_attribute('src').split('_.webp')[0].replace('_50x50.jpg','')
-                option1_list.append(temp[i].split('" alt')[0].replace('"','') + ';' + last_img)
+                if self.translate == True:
+                    translated_text = self.TranslateGoogle(temp[i].split('" alt')[0].replace('"',''), 'ko')
+                else:
+                    translated_text = temp[i].split('" alt')[0].replace('"','')
+                option1_list.append(translated_text + ';' + last_img)
             else:
-                option1_list.append(temp[i].split('" alt')[0].replace('"','') + ';' + temp[i].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg',''))
+                if self.translate == True:
+                    translated_text = self.TranslateGoogle(temp[i].split('" alt')[0].replace('"',''), 'ko')
+                else:
+                    translated_text = temp[i].split('" alt')[0].replace('"','')
+                option1_list.append(translated_text + ';' + temp[i].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg',''))
             
             if '.png' in option1_list[i]:
                 option1_list[i] = option1_list[i].split('_.webp')[0].replace('"','').replace('_50x50.png','').replace('.png', '') + '.png'
-            option1_total.append(temp[i].split('" alt')[0].replace('"',''))
+            option1_total.append(translated_text)
 
         sold_out_idx = 0
         for i in range(len(temp)):
@@ -617,7 +628,10 @@ class MyWindow(QMainWindow, form_class):
         self.driver.get('https://ko.aliexpress.com/')
         self.text.run('알리익스프레스 URL re-open 완료')
         time.sleep(self.process_delay)
-        
+    
+    def TranslateGoogle(self, text, option):
+        return self.translator.translate(text, dest=option).text
+
     def TranslateChinese(self, text):
         client_id = "Uvq1xEXtYvQQs5zR00p2"
         client_pw = "0j597g2wUR"
