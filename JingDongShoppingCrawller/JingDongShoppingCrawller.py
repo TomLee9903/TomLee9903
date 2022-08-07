@@ -190,7 +190,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22073114')
+        self.text.run('PGM ver : 22080717')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -794,12 +794,11 @@ class MyWindow(QMainWindow, form_class):
         #while self.j < 60:
         while True:
             self.no_crawl = False
-            if (self.i == 0 and self.j == 0) or self.re_login == True:
+            if (self.i == 0 and self.j == 0):
                 try:
                     qr_img = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#J-global-toolbar > div > div.jdm-toolbar.J-toolbar > div.jdm-toolbar-footer > div.J-trigger.jdm-toolbar-tab.jdm-tbar-tab-qrcode > div')))[0]
                     qr_img.click()
                     time.sleep(1)
-                    self.re_login = False
                 except:
                     pass
             try:
@@ -864,19 +863,7 @@ class MyWindow(QMainWindow, form_class):
                 continue
 
             self.windows_user_name = os.path.expanduser('~')
-            # now_time = datetime.datetime.now()
-            # today = now_time.strftime('%Y%m%d')  #YYYY-MM-DD
-            # img_folder = '{}\\Desktop\\{}_징동닷컴'.format(self.windows_user_name, today)
-            # try:
-            #     if not os.path.isdir(img_folder):
-            #         os.mkdir(img_folder)
-            # except OSError:
-            #     self.text.run('이미지 폴더를 생성하는데 실패했습니다.')
-            #     break
 
-            # image_name = self.CleanText(title)
-            # t = urllib.request.urlretrieve(img_url, img_folder + '\\' + image_name.replace(' ','_').replace('【','').replace('\\', '').replace('/','') + '.jpg')
-            
             # 상세 페이지
             ret, detail_imgs = self.GetDetailImages()
             if ret == 0:
@@ -950,6 +937,7 @@ class MyWindow(QMainWindow, form_class):
                             else:
                                 pass
             
+            self.tb_temp[self.columns[0]][self.idx] = self.item_name.text()
             self.tb_temp[self.columns[12]][self.idx] = self.search_url
             self.tb_temp[self.columns[13]][self.idx] = select_url
             if self.price == "暂无报价":
@@ -995,7 +983,7 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
                 self.text.run('마지막 아이템입니다.')
                 self.text.run('크롤링이 완료되었습니다.')
-                self.text.run('{}개 중 {}개 수집 완료'.format(str(self.cnt_page * 60), str(self.final_cnt) + 1))
+                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt + 1))
                 # 크롬드라이버 종료
                 self.end_time = self.text.GetTime()
                 diff_time = self.end_time - self.start_time
@@ -1157,10 +1145,11 @@ class MyWindow(QMainWindow, form_class):
                         pass
 
             try:
-                temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('//img','img')
+                temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('//img','https://img')
             except:
                 img_xpath = '//*[@id="spec-img"]'
-                temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('//img','img')
+                temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('//img','https://img')
+
 
             prices.append(float(price_temp))
             option1_list.append(option1_total[n] + ';' + temp)
@@ -1206,18 +1195,28 @@ class MyWindow(QMainWindow, form_class):
                 for i in range(len(img_temp)):
                     if 'data-big-img' in img_temp[i]:
                         img_temp[i] = img_temp[i].split('data-big-img=')[1]
-                    if 'http:' in img_temp[i] or 'https:' in img_temp[i]:
-                        detail_imgs.append(img_temp[i].split(');')[0].replace(" alt=", ''))
+                    if 'http://' in img_temp[i] or 'https://' in img_temp[i]:
+                        if 'blank' not in img_temp[i]:
+                            detail_imgs.append(img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
                     else:
-                        detail_imgs.append('https:' + img_temp[i].split(');')[0].replace(" alt=", ''))
+                        if 'blank' not in img_temp[i]:
+                            if '//img' not in img_temp[i]:
+                                detail_imgs.append('https://' + img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                            else:
+                                detail_imgs.append('https:' + img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
             else:
                 for i in range(len(img_temp)):
                     if 'data-big-img' in img_temp[i]:
                         img_temp[i] = img_temp[i].split('data-big-img=')[1]
-                    if 'http:' in img_temp[i] or 'https:' in img_temp[i]:
-                        detail_imgs.append(img_temp[i].split('">')[0].replace('"','').replace(" alt=", ''))
+                    if 'http://' in img_temp[i] or 'https://' in img_temp[i]:
+                        if 'blank' not in img_temp[i]:
+                            detail_imgs.append(img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
                     else:
-                        detail_imgs.append('https:' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", ''))
+                        if 'blank' not in img_temp[i]:
+                            if '//img' not in img_temp[i]:
+                                detail_imgs.append('https://' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                            else:
+                                detail_imgs.append('https:' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
         except:
             try:
                 img_temp = self.driver.find_element(By.XPATH, '//*[@id="J-detail-content"]').get_attribute('innerHTML').split('url(//')[1:]
@@ -1225,10 +1224,15 @@ class MyWindow(QMainWindow, form_class):
                 return ret, detail_imgs
 
             for i in range(len(img_temp)):
-                if 'http:' in img_temp[i] or 'https:' in img_temp[i]:
-                    detail_imgs.append(img_temp[i].split(');')[0])
+                if 'http://' in img_temp[i] or 'https://' in img_temp[i]:
+                    if 'blank' not in img_temp[i]:
+                        detail_imgs.append(img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
                 else:
-                    detail_imgs.append('https:' + img_temp[i].split(');')[0])
+                    if 'blank' not in img_temp[i]:
+                        if '//img' not in img_temp[i]:
+                            detail_imgs.append('https://' + img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                        else:
+                            detail_imgs.append('https:' + img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
             
         return ret, detail_imgs
 
