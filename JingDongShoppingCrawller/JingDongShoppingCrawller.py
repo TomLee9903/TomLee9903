@@ -190,7 +190,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22081018')
+        self.text.run('PGM ver : 22081119')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -806,7 +806,6 @@ class MyWindow(QMainWindow, form_class):
                 except:
                     pass
             try:
-                time.sleep(2)
                 temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
                 self.ac.move_to_element(temp).pause(0.5).click().perform()
                 time.sleep(1)
@@ -848,6 +847,18 @@ class MyWindow(QMainWindow, form_class):
                 else:
                     before_h = after_h
             
+            self.main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
+            self.sku_temp = []
+            try:
+                sku = self.main_product.split('data-sku=')[1:]
+                for i in range(len(sku)):
+                    self.sku_temp.append(sku[i].split(' data-value')[0].split(' clstag')[0].split(' href')[0].replace('"',''))
+            except:
+                sku = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH,'//*[@id="choose-btns"]'))).get_attribute('innerHTML').split('pid=')[1].split('&')[0]
+                for i in range(len(sku)):
+                    self.sku_temp.append(sku[i].split(' data-value')[0].replace('"',''))
+            self.sku_temp = list(dict.fromkeys(self.sku_temp))
+
             # 선택제품가격
             ret = self.GetPrice()
             if ret == 0:
@@ -1024,35 +1035,22 @@ class MyWindow(QMainWindow, form_class):
             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
     
     def GetPrice(self):
-        self.elem_idx = 10
         ret = 1
-        try:
-            self.price = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))))).text.replace("￥", "").replace(" ", "")
-        except:
+        for i in range(len(self.sku_temp)):
             try:
-                self.elem_idx += 1
-                self.price = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))))).text.replace("￥", "").replace(" ", "")
+                self.price = self.main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[i]))[1].split('<')[0]
+                break
             except:
-                try:
-                    self.elem_idx += 1
-                    self.price = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))))).text.replace("￥", "").replace(" ", "")
-                except:
-                    try:
-                        self.elem_idx = 9
-                        self.price = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))))).text.replace("￥", "").replace(" ", "")
-                    except:
-                        try:
-                            self.driver.find_element(By.XPATH, self.login_xpath)
-                            ret = 0
-                        except:
-                            self.price = 0
+                continue
+        
         return ret
 
     def GetTitle(self):
         title = ''
         ret = 1
+        self.elem_idx = 10
         try:
-            title = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'body > div:nth-child({}) > div > div.itemInfo-wrap > div.sku-name'.format(str(self.elem_idx))))).text
+            title = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.sku-name'))).text
         except:
             try:
                 self.elem_idx += 1
@@ -1090,10 +1088,10 @@ class MyWindow(QMainWindow, form_class):
         prices = []
         choose_idx = 1
         max_price = 0
-        sku_temp = []
+        option2_temp = []
         #try:
         pre_check = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attrs'))).text
-        main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.summary.p-choose-wrap'))).get_attribute('innerHTML')
+        main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
         
         if self.skip_option == True:
             if pre_check != '':
@@ -1109,7 +1107,10 @@ class MyWindow(QMainWindow, form_class):
                 self.sku_id.append(sku)
                 self.only_one = True
                 
-                option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                try:
+                    option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                except:
+                    pass
                 if len(option2_temp) != 0:
                     for i in range(len(option2_temp)):
                         option2_list.append(option2_temp[i].split('">')[1].split('</a>')[0].replace('"',''))
@@ -1133,8 +1134,10 @@ class MyWindow(QMainWindow, form_class):
                 sku = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH,'//*[@id="choose-btns"]'))).get_attribute('innerHTML').split('pid=')[1].split('&')[0]
                 self.sku_id.append(sku)
                 self.only_one = True
-                    
-                option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                try:
+                    option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                except:
+                    pass
                 if len(option2_temp) != 0:
                     for i in range(len(option2_temp)):
                         option2_list.append(option2_temp[i].split('">')[1].split('</a>')[0].replace('"',''))
@@ -1148,9 +1151,6 @@ class MyWindow(QMainWindow, form_class):
                         pass
             else:
                 option1_total = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-1'))).text.split('\n')[1:]
-                sku = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-1'))).get_attribute('innerHTML').split('data-sku=')[1:]
-                for i in range(len(sku)):
-                    sku_temp.append(sku[i].split(' data-value')[0].replace('"',''))
                 # if sku_temp[0] in self.sku_id:
                 #     if self.search_type == 1:
                 #         self.text.run('{}페이지 {}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
@@ -1163,8 +1163,10 @@ class MyWindow(QMainWindow, form_class):
                 #     prices = []
 
                 #     return option1_total, option1_list, option2_list, prices
-    
-                option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                try:
+                    option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                except:
+                    pass
                 if len(option2_temp) != 0:
                     for i in range(len(option2_temp)):
                         option2_list.append(option2_temp[i].split('">')[1].split('</a>')[0].replace('"',''))
@@ -1177,8 +1179,7 @@ class MyWindow(QMainWindow, form_class):
                     except:
                         pass
 
-                price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))
-                time.sleep(1)
+                #price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))
                 # if len(option1_total) > 30:
                 #     if self.search_type == 1:
                 #         self.text.run('{}페이지 {}번째 아이템의 옵션 갯수를 30개로 한정합니다.'.format(self.i + 1, self.j + 1))
@@ -1207,7 +1208,9 @@ class MyWindow(QMainWindow, form_class):
                     
                     img_xpath = '//*[@id="choose-attr-{}"]/div[2]/div[{}]/a/img'.format(str(choose_idx), str(n+1))
                     try:
-                        price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
+                        main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
+                        price_temp = main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[n]))[1].split('<')[0]
+                        #price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
                     except:
                         try:
                             price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx - 1))
@@ -1220,10 +1223,10 @@ class MyWindow(QMainWindow, form_class):
                                 pass
 
                     try:
-                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('//img','https://img')
+                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0]
                     except:
                         img_xpath = '//*[@id="spec-img"]'
-                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('//img','https://img')
+                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0]
 
                     prices.append(float(price_temp))
                     option1_list.append(option1_total[n] + ';' + temp)
@@ -1259,9 +1262,7 @@ class MyWindow(QMainWindow, form_class):
     
     def GetDetailImages(self):
         ret = 1
-        
         detail_imgs = []
-        is_pass = False
         try:
             img_temp = self.driver.find_element(By.XPATH, '//*[@id="J-detail-content"]').get_attribute('innerHTML').split('src=')[1:]
             if len(img_temp) == 0:
