@@ -93,7 +93,7 @@
        <item row="0" column="2">
         <widget class="QCheckBox" name="no_option">
          <property name="text">
-          <string>No-옵션 수집</string>
+          <string>단일상품 수집</string>
          </property>
         </widget>
        </item>
