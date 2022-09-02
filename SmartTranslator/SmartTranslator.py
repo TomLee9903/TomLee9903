@@ -70,11 +70,22 @@ class MyWindow(QMainWindow, form_class):
         self.text = TextBrowser()               # UI에 text 출력 위한 객체
         self.translator = google.Translator()
         self.windows_user_name = os.path.expanduser('~')
+        self.translate_target = 1
+        self.left_param = 0
+        self.right_param = 0
+        self.pre_text = ''
+        self.current_text = ''
+        self.silent_mode = True
+        self.refresh = False
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
         self.select_file.clicked.connect(self.SetFile)
         self.clear_file.clicked.connect(self.ClearFile)
+        self.title_radio.clicked.connect(self.SetTranslateTarget)
+        self.option_radio.clicked.connect(self.SetTranslateTarget)
+        self.all_radio.clicked.connect(self.SetTranslateTarget)
+        self.silent_check.clicked.connect(self.SetSilentMode)
         self.setAcceptDrops(True)
         self.acceptDrops()
 
@@ -105,9 +116,25 @@ class MyWindow(QMainWindow, form_class):
         root = tkinter.Tk()
         root.withdraw()
         self.filename = askopenfilename(parent=root, filetypes=[('수집데이터 엑셀', '.xlsx')], initialdir=self.windows_user_name, title='번역을 원하시는 파일을 선택해주세요')
-        self.df = pd.read_excel(self.filename)
-        self.df.fillna('', inplace=True)
-        self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1].replace('.xlsx','')))
+        if self.filename != '':
+            self.df = pd.read_excel(self.filename)
+            self.df.fillna('', inplace=True)
+            self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1].replace('.xlsx','')))
+
+    def SetTranslateTarget(self):
+        if self.title_radio.isChecked():
+            self.translate_target = 0
+        elif self.option_radio.isChecked():
+            self.translate_target = 1
+        elif self.all_radio.isChecked():
+            self.translate_target = 2
+    
+    def SetSilentMode(self):
+        silent = self.silent_check.isChecked()
+        if silent == True:
+            self.silent_mode = True
+        elif silent == False:
+            self.silent_mode = False
 
     def ClearFile(self):
         self.df = []
@@ -127,18 +154,20 @@ class MyWindow(QMainWindow, form_class):
     # 파파고 URL 오픈
     @pyqtSlot()
     def OpenUrl(self):
-        try:
-            shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
-        except FileNotFoundError:
-            pass
+        # try:
+        #     shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
+        # except FileNotFoundError:
+        #     pass
         
-        try:
-            subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
-        except:
-            subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+        # try:
+        #     subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+        # except:
+        #     subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
 
         self.options = Options()
-        self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        if self.silent_mode == True:
+            self.options.add_argument('--headless')
+        #self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
         # 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션       
         chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
         try:
@@ -168,77 +197,209 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartTranslate(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22080702')
+        self.text.run('PGM ver : 22081303')
         self.start_time = self.text.GetTime()
         filename = self.filename.split('.xlsx')[0]
         self.OpenUrl()
         pyautogui.press('f12')
         time.sleep(2)
-        pyautogui.press('f12')
+
+        translate_table = ['상품제목', '옵션명', '상품제목 + 옵션명']
+        self.left_param = self.left_combo.currentIndex()
+        self.right_param = self.right_combo.currentIndex()
+        self.driver.find_element(By.CSS_SELECTOR, '#ddSourceLanguage > div.dropdown_top___13QlJ > button:nth-child(2) > span').click()
+        time.sleep(2)
+        self.driver.find_element(By.CSS_SELECTOR, '#ddSourceLanguage > div.dropdown_menu___XsI_h.active___3VPGL > ul > li:nth-child({})'.format(self.left_param + 1)).click()
+        time.sleep(2)
+        self.driver.find_element(By.CSS_SELECTOR, '#ddTargetLanguage > div.dropdown_top___13QlJ > button:nth-child(2) > span').click()
+        time.sleep(2)
+        self.driver.find_element(By.CSS_SELECTOR, '#ddTargetLanguage > div.dropdown_menu___XsI_h.active___3VPGL > ul > li:nth-child({})'.format(self.right_param + 1)).click()
+        time.sleep(2)
         
         for i in range(len(self.df['상품제목'])):
-            option1_list_text = []
-            option1_total_text = []
-            option1_list_temp = []
-            option1_total_temp = []
-
+            option1_list = []
+            option2_list = []
+            option1_total = []
+            cnt = 0
             try:
-                left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
             except:
+                try:
+                    self.RefreshWeb()
+                    self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                    self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                    self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                    self.left.clear()
+                except:
+                    self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                    return 0
+
+            if self.translate_target == 0:
+                while True:
+                    ret, translated_title = self.TranslateTitle(self.df['상품제목'][i])
+                    if ret == 0:
+                        self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                    if '감지된' in self.current_text:
+                        self.RefreshWeb()
+                    if self.current_text != self.pre_text and self.current_text != '':
+                        break
+                    cnt += 1
+                    if cnt == 3:
+                        break
+                    else:
+                        self.driver.refresh()
+                        try:
+                            self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                            self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                            self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                        except:
+                            try:
+                                self.RefreshWeb()
+                                self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                                self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                                self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                                self.left.clear()
+                            except:
+                                self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                                return 0
+                        time.sleep(1)
+
+                self.df['상품제목'][i] = translated_title
+                self.left.clear()
+                self.pre_text = self.current_text
                 time.sleep(1)
-                left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
-                right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
-                translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
 
-            left.send_keys(self.df['상품제목'][i])
-            time.sleep(1)
-            try:
-                translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
-                translate_btn.click()
-            except:
-                time.sleep(1)
-                translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
-                translate_btn.click()
-            time.sleep(3)
+            elif self.translate_target == 1:                
+                while True:
+                    ret, option1_list, option2_list, option1_total = self.TranslateOption(self.df['옵션1'][i], self.df['옵션2'][i], self.df['옵션_종합'][i])
+                    if ret == 0:
+                        self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
 
-            try:
-                right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
-            except:
-                time.sleep(1)
-                right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                    if '감지된' in self.current_text:
+                        self.RefreshWeb()
+                    if (self.current_text != self.pre_text and self.current_text != '') or len(option1_list) == 0:
+                        break
+                    cnt += 1
+                    if cnt == 3:
+                        break
+                    else:
+                        self.driver.refresh()
+                        try:
+                            self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                            self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                            self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                        except:
+                            try:
+                                self.RefreshWeb()
+                                self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                                self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                                self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                                self.left.clear()
+                            except:
+                                self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                                return 0
+                        time.sleep(1)
 
-            self.df['상품제목'][i] = right.text
-            left.clear()
-            time.sleep(1)
+                option1_list = '\n'.join(option1_list)
+                option2_list = '\n'.join(option2_list)
+                option1_total = '\n'.join(option1_total)
 
-            option1_list_text = self.df['옵션1'][i].split('\n')
-            option1_total_text = self.df['옵션_종합'][i].split('\n')
-
-            for n in range(len(option1_list_text)):
-                temp1 = option1_list_text[n].split(';')
-                temp2 = option1_total_text[n].split('/')
-                if temp1[0] != '':
-                    left.send_keys(temp1[0])
-                    translate_btn.click()
-                    time.sleep(2)
-                    option1_list_temp.append(right.text + ';' + temp1[1])
-                    option1_total_temp.append(right.text + '/' + temp2[1])
-                    left.clear()
+                self.df['옵션1'][i] = option1_list
+                self.df['옵션2'][i] = option2_list
+                self.df['옵션_종합'][i] = option1_total
+                self.left.clear()
+                self.pre_text = self.current_text
                 time.sleep(0.5)
-                
-            option1_list_temp = '\n'.join(option1_list_temp)
-            option1_total_temp = '\n'.join(option1_total_temp)
 
-            self.df['옵션1'][i] = option1_list_temp
-            self.df['옵션_종합'][i] = option1_total_temp
+            else:
+                while True:
+                    ret, translated_title = self.TranslateTitle(self.df['상품제목'][i])
+                    if ret == 0:
+                        self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+
+                    if '감지된' in self.current_text:
+                        self.RefreshWeb()
+                    if self.current_text != self.pre_text and self.current_text != '':
+                        break
+                    cnt += 1
+                    if cnt == 3:
+                        break
+                    else:
+                        self.driver.refresh()
+                        try:
+                            self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                            self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                            self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                        except:
+                            try:
+                                self.RefreshWeb()
+                                self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                                self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                                self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                                self.left.clear()
+                            except:
+                                self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                                return 0
+                        time.sleep(1)
+                        
+                self.pre_text = self.current_text
+                self.df['상품제목'][i] = translated_title
+                self.left.clear()
+                time.sleep(0.5)
+                cnt = 0
+                while True:
+                    ret, option1_list, option2_list, option1_total = self.TranslateOption(self.df['옵션1'][i], self.df['옵션2'][i], self.df['옵션_종합'][i])
+                    if ret == 0:
+                        self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+
+                    if '감지된' in self.current_text:
+                        self.RefreshWeb()
+                    if (self.current_text != self.pre_text and self.current_text != '') or len(option1_list) == 0:
+                        break
+                    cnt += 1
+                    if cnt == 3:
+                        break
+                    else:
+                        self.driver.refresh()
+                        try:
+                            self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                            self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                            self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                        except:
+                            try:
+                                self.RefreshWeb()
+                                self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                                self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                                self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                                self.left.clear()
+                            except:
+                                self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                                return 0
+                        time.sleep(1)
+                        
+                self.pre_text = self.current_text
+                option1_list = '\n'.join(option1_list)
+                option2_list = '\n'.join(option2_list)
+                option1_total = '\n'.join(option1_total)
+
+                self.df['옵션1'][i] = option1_list
+                self.df['옵션2'][i] = option2_list
+                self.df['옵션_종합'][i] = option1_total
+                
+                self.left.clear()
+                time.sleep(0.5)
+
             self.df.to_excel('{}_translated.xlsx'.format(filename), index=False)
 
-            self.text.run('{}번째 상품 번역 성공!'.format(i + 1))
+            self.text.run('{}번째 상품 {} 번역 성공!'.format(i + 1, translate_table[self.translate_target]))
             
         self.end_time = self.text.GetTime()
         diff_time = self.end_time - self.start_time
         self.text.run('--End work--')
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+        self.driver.close()
 
     def TranslateGoogle(self, text, option):
         try:
@@ -247,6 +408,105 @@ class MyWindow(QMainWindow, form_class):
             ret_text = ''
         
         return ret_text
+
+    def TranslateTitle(self, title):
+        ret = 1
+        try:
+            self.left.clear()
+            self.left.send_keys(title)
+            self.translate_btn.click()
+        except:
+            ret = 0
+
+        time.sleep(3)
+        self.current_text = self.right.text
+
+        return ret, self.right.text
+
+    def TranslateOption(self, option1_list, option2_list, option1_total):
+        ret = 1
+        try:
+            self.left.clear()
+        except:
+            ret = 0
+        option1_list_text = []
+        option1_total_text = []
+        option2_list_text = []
+        option1_list_temp = []
+        option2_list_temp = []
+        option1_total_temp = []
+        temp1_option = []
+        temp2_option = []
+        temp3_option = []
+        temp1_img = []
+        temp2_price = []
+        
+        option1_list_text = option1_list.split('\n')
+        option1_total_text = option1_total.split('\n')
+        
+        for n in range(len(option1_list_text)):
+            try:
+                temp1_option.append(option1_list_text[n].split(';')[0])
+                temp2_option.append(option1_total_text[n].split('/')[0])
+                temp1_img.append(option1_list_text[n].split(';')[1])
+                temp2_price.append(option1_total_text[n].split('/')[1])
+            except:
+                pass
+        if len(option2_list) != 0:
+            option2_list_text = option2_list.split('\n')
+            for n in range(len(option2_list_text)):
+                temp3_option.append(option2_list_text[n].split(';')[0])
+
+        if temp1_option[0] != '':
+            try:
+                self.left.send_keys('\n'.join(temp1_option))
+                self.translate_btn.click()
+            except:
+                ret = 0
+            time.sleep(3)
+            self.current_text = self.right.text
+            option1_temp = self.right.text.split('\n')
+            if len(option1_temp) == len(temp1_img):
+                for j in range(len(option1_temp)):
+                    option1_list_temp.append(option1_temp[j] + ';' + temp1_img[j])
+                    option1_total_temp.append(option1_temp[j] + '/' + temp2_price[j])
+
+        if len(temp3_option) != 0:
+            try:
+                self.left.clear()
+                self.left.send_keys('\n'.join(temp3_option))
+                self.translate_btn.click()
+            except:
+                ret = 0
+            time.sleep(3)
+            option2_temp = self.right.text.split('\n')
+            if len(option2_temp) == len(temp3_option):
+                for j in range(len(option2_list_text)):
+                    option2_list_temp.append(option2_temp[j] + ';')
+
+        return ret, option1_list_temp, option2_list_temp, option1_total_temp
+
+    def RefreshWeb(self):
+        pyautogui.press('f12')
+        time.sleep(1)
+        pyautogui.press('f12')
+        time.sleep(1)
+        self.driver.refresh()
+        try:
+            self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+            self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+            self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+        except:
+            try:
+                self.RefreshWeb()
+                self.left = self.driver.find_element(By.CSS_SELECTOR, 'textarea#txtSource')
+                self.right = self.driver.find_element(By.CSS_SELECTOR, 'div#txtTarget')
+                self.translate_btn = self.driver.find_element(By.CSS_SELECTOR, '#btnTranslate > span.translate_pc___2dgT8')
+                self.left.clear()
+            except:
+                self.text.run('웹페이지에 오류가 발생되었습니다. 프로그램을 재실행 해주시기 바랍니다.')
+                return 0
+        time.sleep(2)
 
     # 쓰레드 종료
     def KillThread(self):

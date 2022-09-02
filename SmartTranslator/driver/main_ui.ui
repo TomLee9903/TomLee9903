@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>638</width>
-    <height>426</height>
+    <width>737</width>
+    <height>581</height>
    </rect>
   </property>
   <property name="font">
@@ -28,103 +28,328 @@
    <number>-2</number>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout_4">
+   <layout class="QGridLayout" name="gridLayout_5">
     <item row="0" column="0">
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="0">
-       <widget class="QGroupBox" name="groupBox">
-        <property name="title">
-         <string>번역 파일</string>
+     <widget class="QGroupBox" name="groupBox">
+      <property name="title">
+       <string>번역 파일</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="3" column="2">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="select_file">
+         <property name="text">
+          <string>파일 선택</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="clear_file">
+         <property name="text">
+          <string>파일 클리어</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2" alignment="Qt::AlignRight">
+        <widget class="QCheckBox" name="silent_check">
+         <property name="text">
+          <string>조용한 모드</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="title">
+       <string>번역 타겟</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="QRadioButton" name="title_radio">
+         <property name="text">
+          <string>상품 제목</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QRadioButton" name="option_radio">
+         <property name="text">
+          <string>상품 옵션명</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QRadioButton" name="all_radio">
+         <property name="text">
+          <string>상품 제목 + 옵션명</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="0" colspan="2">
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="title">
+       <string>번역 언어</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;번역본(오른쪽)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;원본(왼쪽)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="right_combo">
+         <item>
+          <property name="text">
+           <string>한국어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>영어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>일본어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>중국어(간체)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>중국어(번체)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>스페인어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>프랑스어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>독일어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>러시아어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>포르투갈어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>이탈리아어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>베트남어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>태국어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>인도네시아어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>힌디어</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="left_combo">
+         <item>
+          <property name="text">
+           <string>언어 감지</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>한국어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>영어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>일본어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>중국어(간체)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>중국어(번체)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>스페인어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>프랑스어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>독일어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>러시아어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>포르투갈어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>이탈리아어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>베트남어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>태국어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>인도네시아어</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>힌디어</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="0" colspan="2">
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="1" column="0">
+       <widget class="QPushButton" name="run_btn">
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
         </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="QPushButton" name="select_file">
-           <property name="text">
-            <string>파일 선택</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="1" column="0">
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="0" column="2">
-          <widget class="QPushButton" name="clear_file">
-           <property name="text">
-            <string>파일 클리어</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <property name="text">
+         <string>번역 시작</string>
+        </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0" colspan="2">
-         <widget class="QTextBrowser" name="textBrowser">
-          <property name="font">
-           <font>
-            <family>맑은 고딕</family>
-            <pointsize>11</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="run_btn">
-          <property name="font">
-           <font>
-            <family>맑은 고딕</family>
-            <pointsize>11</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>번역 시작</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="exit_btn">
-          <property name="font">
-           <font>
-            <family>맑은 고딕</family>
-            <pointsize>11</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>종료</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="exit_btn">
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>종료</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="2">
+       <widget class="QTextBrowser" name="textBrowser">
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -135,7 +360,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>638</width>
+     <width>737</width>
      <height>31</height>
     </rect>
    </property>
