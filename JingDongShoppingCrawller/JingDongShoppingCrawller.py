@@ -100,6 +100,7 @@ class MyWindow(QMainWindow, form_class):
         self.item_translate = False
         self.option_translate = False
         self.translator = google.Translator()
+        self.driver = ''
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
@@ -110,6 +111,7 @@ class MyWindow(QMainWindow, form_class):
         self.auto_login_val.clicked.connect(self.SetAutoLogin)
         self.item_translate_btn.clicked.connect(self.SetItemTranslate)
         self.option_translate_btn.clicked.connect(self.SetOptionTranslate)
+        self.initial_setting.clicked.connect(self.OpenInitialSetting)
 
     # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
     def closeEvent(self, QCloseEvent): 
@@ -186,11 +188,48 @@ class MyWindow(QMainWindow, form_class):
             self.option_translate = True
         else:
             self.option_translate = False
+    
+    def OpenInitialSetting(self):
+        if self.driver == '':
+            try:
+                subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+            except:
+                subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+
+            self.options = Options()
+            user_agent = "Mozilla/5.0 (Linux; Android 9; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.83 Mobile Safari/537.36"
+            self.options.add_argument('user-agent=' + user_agent)
+            self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+
+            # 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션       
+            chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
+            try:
+                self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+            except:
+                chromedriver_autoinstaller.install(True)
+                self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+            self.driver.implicitly_wait(10)
+            
+            prefs = {'profile.default_content_setting_values': {'cookies' : 2, 'images': 2, 'plugins' : 2, 'popups': 2, 'geolocation': 2, 'notifications' : 2, 'auto_select_certificate': 2, 'fullscreen' : 2, 'mouselock' : 2, 'mixed_script': 2, 'media_stream' : 2, 'media_stream_mic' : 2, 'media_stream_camera': 2, 'protocol_handlers' : 2, 'ppapi_broker' : 2, 'automatic_downloads': 2, 'midi_sysex' : 2, 'push_messaging' : 2, 'ssl_cert_decisions': 2, 'metro_switch_to_desktop' : 2, 'protected_media_identifier': 2, 'app_banner': 2, 'site_engagement' : 2, 'durable_storage' : 2}}   
+            self.options.add_experimental_option('prefs', prefs)
+            # 크롬 브라우저와 셀레니움을 사용하면서 발생되는 '시스템에 부착된 장치가 작동하지 않습니다.' 라는 크롬 브라우저의 버그를 조치하기 위한 코드. 
+            self.options.add_experimental_option("excludeSwitches", ["enable-logging"])
+                    
+            # 속도 향상을 위한 옵션 해제
+            self.options.add_argument("disable-gpu") 
+            self.options.add_argument("disable-infobars")
+            self.options.add_argument("--disable-extensions")
+        # 윈도우 사이즈 맥스로 키우기
+        self.driver.maximize_window()
+        self.driver.get('chrome://settings/content/popups')
+        self.text.run('크롬 초기 세팅 URL open 완료')
+
+        time.sleep(self.process_delay)
 
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22081119')
+        self.text.run('PGM ver : 22081821')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -239,39 +278,39 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 URL 오픈
     @pyqtSlot()
     def OpenUrl(self):
-        try:
-            shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
-        except FileNotFoundError:
-            pass
-        
-        try:
-            subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
-        except:
-            subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+        # try:
+        #     shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
+        # except FileNotFoundError:
+        #     pass
+        if self.driver == '':
+            try:
+                subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+            except:
+                subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
 
-        self.options = Options()
-        user_agent = "Mozilla/5.0 (Linux; Android 9; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.83 Mobile Safari/537.36"
-        self.options.add_argument('user-agent=' + user_agent)
-        self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+            self.options = Options()
+            user_agent = "Mozilla/5.0 (Linux; Android 9; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.83 Mobile Safari/537.36"
+            self.options.add_argument('user-agent=' + user_agent)
+            self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
-        # 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션       
-        chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
-        try:
-            self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
-        except:
-            chromedriver_autoinstaller.install(True)
-            self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
-        self.driver.implicitly_wait(10)
-        
-        prefs = {'profile.default_content_setting_values': {'cookies' : 2, 'images': 2, 'plugins' : 2, 'popups': 2, 'geolocation': 2, 'notifications' : 2, 'auto_select_certificate': 2, 'fullscreen' : 2, 'mouselock' : 2, 'mixed_script': 2, 'media_stream' : 2, 'media_stream_mic' : 2, 'media_stream_camera': 2, 'protocol_handlers' : 2, 'ppapi_broker' : 2, 'automatic_downloads': 2, 'midi_sysex' : 2, 'push_messaging' : 2, 'ssl_cert_decisions': 2, 'metro_switch_to_desktop' : 2, 'protected_media_identifier': 2, 'app_banner': 2, 'site_engagement' : 2, 'durable_storage' : 2}}   
-        self.options.add_experimental_option('prefs', prefs)
-        # 크롬 브라우저와 셀레니움을 사용하면서 발생되는 '시스템에 부착된 장치가 작동하지 않습니다.' 라는 크롬 브라우저의 버그를 조치하기 위한 코드. 
-        self.options.add_experimental_option("excludeSwitches", ["enable-logging"])
-                
-        # 속도 향상을 위한 옵션 해제
-        self.options.add_argument("disable-gpu") 
-        self.options.add_argument("disable-infobars")
-        self.options.add_argument("--disable-extensions")
+            # 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션       
+            chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
+            try:
+                self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+            except:
+                chromedriver_autoinstaller.install(True)
+                self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+            self.driver.implicitly_wait(10)
+            
+            prefs = {'profile.default_content_setting_values': {'cookies' : 2, 'images': 2, 'plugins' : 2, 'popups': 2, 'geolocation': 2, 'notifications' : 2, 'auto_select_certificate': 2, 'fullscreen' : 2, 'mouselock' : 2, 'mixed_script': 2, 'media_stream' : 2, 'media_stream_mic' : 2, 'media_stream_camera': 2, 'protocol_handlers' : 2, 'ppapi_broker' : 2, 'automatic_downloads': 2, 'midi_sysex' : 2, 'push_messaging' : 2, 'ssl_cert_decisions': 2, 'metro_switch_to_desktop' : 2, 'protected_media_identifier': 2, 'app_banner': 2, 'site_engagement' : 2, 'durable_storage' : 2}}   
+            self.options.add_experimental_option('prefs', prefs)
+            # 크롬 브라우저와 셀레니움을 사용하면서 발생되는 '시스템에 부착된 장치가 작동하지 않습니다.' 라는 크롬 브라우저의 버그를 조치하기 위한 코드. 
+            self.options.add_experimental_option("excludeSwitches", ["enable-logging"])
+                    
+            # 속도 향상을 위한 옵션 해제
+            self.options.add_argument("disable-gpu") 
+            self.options.add_argument("disable-infobars")
+            self.options.add_argument("--disable-extensions")
         # 윈도우 사이즈 맥스로 키우기
         self.driver.maximize_window()
         self.driver.get('https://passport.jd.com/new/login.aspx?ReturnUrl=https%3A%2F%2Fglobal.jd.com%2F')
@@ -314,11 +353,10 @@ class MyWindow(QMainWindow, form_class):
         }
         loop = 0
         try:
-            if self.restart == True:
-                try:
-                    self.driver.find_element(By.CSS_SELECTOR, '#formlogin > div.item.item-fore1 > span').click()
-                except:
-                    pass
+            try:
+                self.driver.find_element(By.CSS_SELECTOR, '#formlogin > div.item.item-fore1 > span').click()
+            except:
+                pass
             self.id_box = self.driver.find_element(By.CSS_SELECTOR, "#loginname");
             self.pw_box = self.driver.find_element(By.CSS_SELECTOR, "#nloginpwd");
             self.login_button = self.driver.find_element(By.CSS_SELECTOR, '#loginsubmit');
@@ -805,24 +843,23 @@ class MyWindow(QMainWindow, form_class):
                     time.sleep(1)
                 except:
                     pass
-            try:
-                temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
-                self.ac.move_to_element(temp).pause(0.5).click().perform()
-                time.sleep(1)
-            except:
+            while True:
                 try:
-                    self.driver.find_element(By.XPATH, self.login_xpath)
-                    self.ReLogin()
-                    continue
+                    first_tab = self.driver.window_handles[-1]
+                    self.driver.switch_to.window(window_name=first_tab)
+                    temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
+                    self.ac.move_to_element(temp).pause(0.5).click().perform()
+                    time.sleep(1)
                 except:
                     self.text.run('이미지 클릭에 실패했습니다.')
-                    return 0
-            
-            try:
-                WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'body > div:nth-child(10) > div')))
-            except:
-                self.text.run('이미지 클릭에 실패했습니다.')
-                return 0
+                    continue
+                
+                try:
+                    WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'body > div:nth-child(10) > div')))
+                    break
+                except:
+                    self.text.run('이미지 클릭에 실패했습니다.')
+                    continue
 
             self.search_url = self.driver.current_url
             time.sleep(2)
@@ -834,6 +871,182 @@ class MyWindow(QMainWindow, form_class):
                 select_url = self.driver.current_url
             except:
                 self.driver.refresh()
+            
+            sku_list = []
+            self.sku_temp = []
+            self.main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
+            pre_check = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attrs'))).text
+            no_crawl = False
+            if self.skip_option == True:
+                if pre_check != '':
+                    self.text.run('{}페이지 {}번째 아이템은 옵션이 있는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                    if len(self.driver.window_handles) != 1:
+                        for n in range(len(self.driver.window_handles) - 1):
+                            last_tab = self.driver.window_handles[-1]
+                            self.driver.switch_to.window(window_name=last_tab)
+                            self.driver.close()
+                        first_tab = self.driver.window_handles[0]
+                        self.driver.switch_to.window(window_name=first_tab)
+                        time.sleep(self.process_delay)
+                    if self.j == 59:
+                        try:
+                            self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
+                        except:
+                            self.final_cnt += 1
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                            self.text.run('마지막 페이지입니다.')
+                            self.text.run('크롤링이 완료되었습니다.')
+                            self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                            # 크롬드라이버 종료
+                            self.end_time = self.text.GetTime()
+                            diff_time = self.end_time - self.start_time
+                            self.text.run('--End work--')
+                            self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                            self.restart = True
+                            return 1
+                            
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        continue
+                    else:
+                        self.j += 1
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        continue
+                
+            try:
+                option1_ilst_temp = self.main_product.split('data-value=')[1:]
+                for h in range(len(option1_ilst_temp)):
+                    option1_ilst_temp[h] = option1_ilst_temp[h].split(" title=")[0].replace('"','')
+                if len(option1_ilst_temp) != 0:
+                    try:
+                        option1_ilst = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-1'))).text.split('\n')[1:]
+                    except:
+                        option1_ilst = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-2'))).text.split('\n')[1:]
+            except:
+                option1_ilst = []
+            if len(option1_ilst) > 10:
+                if self.search_type == 1:
+                    self.text.run('{}페이지 {}번째 아이템의 옵션 개수가 10개를 초과하였습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                else:
+                    self.text.run('{}-{}번째 아이템의 옵션 개수가 10개를 초과하였습니다. 다음 아이템으로 넘어갑니다.'.format(self.i+1, self.sub_idx+1))
+                
+                if len(self.driver.window_handles) != 1:
+                    for n in range(len(self.driver.window_handles) - 1):
+                        last_tab = self.driver.window_handles[-1]
+                        self.driver.switch_to.window(window_name=last_tab)
+                        self.driver.close()
+                    first_tab = self.driver.window_handles[0]
+                    self.driver.switch_to.window(window_name=first_tab)
+                    time.sleep(self.process_delay)
+
+                if self.j == 59:
+                    try:
+                        self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
+                    except:
+                        self.final_cnt += 1
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 페이지입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+                        return 1
+                        
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    continue
+                else:
+                    self.j += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    continue
+            
+            sku_list_temp = self.main_product.split('data-sku')
+            
+            for sku in sku_list_temp:
+                if 'data-value' in sku:
+                    sku_list.append(sku.split('" data-value')[0].split('="')[1])
+
+            self.sku_temp = list(dict.fromkeys(sku_list))
+            for sku in self.sku_temp:
+                if sku in self.sku_id:
+                    if self.search_type == 1:
+                        self.text.run('{}페이지 {}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                    else:
+                        self.text.run('{}-{}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i+1, self.sub_idx+1))
+                    no_crawl = True
+                    break
+                else:
+                    self.sku_id.append(sku)
+
+            if no_crawl == True:
+                if len(self.driver.window_handles) != 1:
+                    for n in range(len(self.driver.window_handles) - 1):
+                        last_tab = self.driver.window_handles[-1]
+                        self.driver.switch_to.window(window_name=last_tab)
+                        self.driver.close()
+                    first_tab = self.driver.window_handles[0]
+                    self.driver.switch_to.window(window_name=first_tab)
+                    time.sleep(self.process_delay)
+
+                if self.j == 59:
+                    try:
+                        self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
+                    except:
+                        self.final_cnt += 1
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 페이지입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+                        return 1
+                        
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    continue
+                else:
+                    self.j += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    continue
+            
+            for i in range(len(self.sku_temp)):
+                url = 'https://item.jd.com/{}.html'.format(sku_list[i])
+                self.driver.execute_script('window.open("{}");'.format(url))
+                time.sleep(0.5)
+            
+            tab_len = len(self.driver.window_handles)
+            if tab_len != len(sku_list) + 2:
+                if len(self.driver.window_handles) != 1:
+                    for n in range(len(self.driver.window_handles) - 1):
+                        last_tab = self.driver.window_handles[-1]
+                        self.driver.switch_to.window(window_name=last_tab)
+                        self.driver.close()
+                        time.sleep(1)
+
+                    first_tab = self.driver.window_handles[0]
+                    self.driver.switch_to.window(window_name=first_tab)
+                    time.sleep(self.process_delay)
+
+                self.text.run('팝업 차단으로 인해 옵션 탭이 열리지 않았습니다. 초기 설정 버튼 클릭 후 팝업 및 리디렉션 허용 후 재시작 바랍니다.')
+                return 1
+
+            first_option = self.driver.window_handles[1]
+            self.driver.switch_to.window(window_name=first_option)
+            time.sleep(1)
 
             # 페이지 스크롤 최대치로 내리기
             before_h = self.driver.execute_script('return window.scrollY')
@@ -846,18 +1059,6 @@ class MyWindow(QMainWindow, form_class):
                     break
                 else:
                     before_h = after_h
-            
-            self.main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
-            self.sku_temp = []
-            try:
-                sku = self.main_product.split('data-sku=')[1:]
-                for i in range(len(sku)):
-                    self.sku_temp.append(sku[i].split(' data-value')[0].split(' clstag')[0].split(' href')[0].replace('"',''))
-            except:
-                sku = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH,'//*[@id="choose-btns"]'))).get_attribute('innerHTML').split('pid=')[1].split('&')[0]
-                for i in range(len(sku)):
-                    self.sku_temp.append(sku[i].split(' data-value')[0].replace('"',''))
-            self.sku_temp = list(dict.fromkeys(self.sku_temp))
 
             # 선택제품가격
             ret = self.GetPrice()
@@ -896,7 +1097,21 @@ class MyWindow(QMainWindow, form_class):
                     self.driver.switch_to.window(window_name=first_tab)
                     time.sleep(self.process_delay)
                 if self.j == 59:
-                    self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]/em').click()
+                    try:
+                        self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
+                    except:
+                        self.final_cnt += 1
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 페이지입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+                        return 1
                     self.j = 0
                     self.i += 1
                     time.sleep(self.process_delay)
@@ -930,7 +1145,21 @@ class MyWindow(QMainWindow, form_class):
                         self.driver.switch_to.window(window_name=first_tab)
                         time.sleep(self.process_delay)
                     if self.j == 59:
-                        self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]/em').click()
+                        try:
+                            self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
+                        except:
+                            self.final_cnt += 1
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                            self.text.run('마지막 페이지입니다.')
+                            self.text.run('크롤링이 완료되었습니다.')
+                            self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                            # 크롬드라이버 종료
+                            self.end_time = self.text.GetTime()
+                            diff_time = self.end_time - self.start_time
+                            self.text.run('--End work--')
+                            self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                            self.restart = True
+                            return 1
                         self.j = 0
                         self.i += 1
                         time.sleep(self.process_delay)
@@ -954,6 +1183,8 @@ class MyWindow(QMainWindow, form_class):
                         self.ReLogin()
                         continue
                     except:
+                        last_tab = self.driver.window_handles[-1]
+                        self.driver.switch_to.window(window_name=last_tab)
                         self.text.run('옵션1 이미지를 가져오는데 실패했습니다.')
                         current_url = self.driver.current_url
                         if current_url != select_url:
@@ -961,6 +1192,8 @@ class MyWindow(QMainWindow, form_class):
                             continue
                         else:
                             pass
+            first_tab = self.driver.window_handles[-1]
+            self.driver.switch_to.window(window_name=first_tab)
 
             self.tb_temp[self.columns[0]][self.idx] = self.item_name.text()
             self.tb_temp[self.columns[12]][self.idx] = self.search_url
@@ -971,7 +1204,7 @@ class MyWindow(QMainWindow, form_class):
                 self.tb_temp[self.columns[14]][self.idx] = '{}-{}'.format(min(prices), max(prices))
             else:
                 self.tb_temp[self.columns[14]][self.idx] = float(self.price)
-            self.tb_temp[self.columns[15]][self.idx] = title + '({})'.format(self.item_name.text())
+            self.tb_temp[self.columns[15]][self.idx] = title
             self.tb_temp[self.columns[16]][self.idx] = img_url
             self.tb_temp[self.columns[20]][self.idx] = detail_imgs
             
@@ -1020,7 +1253,22 @@ class MyWindow(QMainWindow, form_class):
             else:
                 self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
                 if self.j == 59:
-                    self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]/em').click()
+                    try:
+                        self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
+                    except:
+                        self.final_cnt += 1
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 페이지입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+                        return 1
+
                     self.j = 0
                     self.i += 1
                     self.final_cnt += 1
@@ -1041,7 +1289,11 @@ class MyWindow(QMainWindow, form_class):
                 self.price = self.main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[i]))[1].split('<')[0]
                 break
             except:
-                continue
+                try:
+                    self.price = self.main_product.split('price J-p-')[1].split('{}">'.format(self.sku_temp[i]))[1].split('<')[0]
+                    break
+                except:
+                    continue
         
         return ret
 
@@ -1150,34 +1402,29 @@ class MyWindow(QMainWindow, form_class):
                     except:
                         pass
             else:
-                option1_total = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-1'))).text.split('\n')[1:]
-                # if sku_temp[0] in self.sku_id:
-                #     if self.search_type == 1:
-                #         self.text.run('{}페이지 {}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
-                #     else:
-                #         self.text.run('{}-{}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i+1, self.sub_idx+1))
-
-                #     self.no_crawl = True
-                #     option1_total = []
-                #     option1_list = []
-                #     prices = []
-
-                #     return option1_total, option1_list, option2_list, prices
                 try:
-                    option2_temp = main_product.split('li choose-suits')[1].split('xuanzetaozhuang')[1:]
+                    option1_total = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-1'))).text.split('\n')[1:]
                 except:
-                    pass
-                if len(option2_temp) != 0:
-                    for i in range(len(option2_temp)):
-                        option2_list.append(option2_temp[i].split('">')[1].split('</a>')[0].replace('"',''))
-                else:
+                    option1_total = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-2'))).text.split('\n')[1:]
+
+                option2_text = 'choose-attr-2'
+                if option2_text in main_product:
                     try:
-                        option2_temp = main_product.split('choose-attr-2')[1].split('data-value')[1:]
-                        if len(option2_temp) != 0:
-                            for i in range(len(option2_temp)):
-                                option2_list.append(option2_temp[i].split('="')[1].split(' title')[0].replace('"',''))
+                        option2_list = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'#choose-attr-2'))).text.split('\n')[1:]
                     except:
                         pass
+                    #     pass
+                    # if len(option2_temp) != 0:
+                    #     for i in range(len(option2_temp)):
+                    #         option2_list.append(option2_temp[i].split('">')[1].split('</a>')[0].replace('"',''))
+                    # else:
+                    #     try:
+                    #         option2_temp = main_product.split('choose-attr-2')[1].split('data-value')[1:]
+                    #         if len(option2_temp) != 0:
+                    #             for i in range(len(option2_temp)):
+                    #                 option2_list.append(option2_temp[i].split('="')[1].split(' title')[0].replace('"',''))
+                    #     except:
+                    #         pass
 
                 #price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span.p-price'.format(str(self.elem_idx))
                 # if len(option1_total) > 30:
@@ -1191,72 +1438,120 @@ class MyWindow(QMainWindow, form_class):
                 #     self.no_crawl = True
 
                 #     return option1_total, option1_list, option2_list, prices
-
-                for n in range(0, len(option1_total)):
+                self.driver.close()
+                time.sleep(0.5)
+                len_option_total = len(option1_total)
+                for n in range(0, len_option_total):
                     if self.option_translate == True:
                         option1_total[n] = self.TranslateGoogle(option1_total[n], 'ko')
-                    try:
-                        option = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="choose-attr-{}"]/div[2]/div[{}]'.format(str(choose_idx), str(n+1)))))
-                        option.click()
-                    except:
-                        try:
-                            self.driver.find_element(By.XPATH, self.login_xpath)
-                            return option1_total, option1_list, option2_list, prices
-                        except:
-                            choose_idx += 1
-                            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="choose-attr-{}"]/div[2]/div[{}]'.format(str(choose_idx), str(n+1))))).click()
+                    # try:
+                    #     option = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="choose-attr-{}"]/div[2]/div[{}]'.format(str(choose_idx), str(n+1)))))
+                    #     option.click()
+                    # except:
+                    #     try:
+                    #         self.driver.find_element(By.XPATH, self.login_xpath)
+                    #         return option1_total, option1_list, option2_list, prices
+                    #     except:
+                    #         choose_idx += 1
+                    #         WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="choose-attr-{}"]/div[2]/div[{}]'.format(str(choose_idx), str(n+1))))).click()
                     
+                    target_option = self.driver.window_handles[len_option_total - n]
+                    self.driver.switch_to.window(window_name=target_option)
+
                     img_xpath = '//*[@id="choose-attr-{}"]/div[2]/div[{}]/a/img'.format(str(choose_idx), str(n+1))
                     try:
                         main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
-                        price_temp = main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[n]))[1].split('<')[0]
+                        for nn in range(len(self.sku_temp)):
+                            try:
+                                price_temp = main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[nn]))[1].split('<')[0]
+                                break
+                            except:
+                                continue
                         #price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
                     except:
                         try:
-                            price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx - 1))
-                            price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
+                            self.driver.refresh()
+                            time.sleep(5)
+                            main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
+                            for nn in range(len(self.sku_temp)):
+                                try:
+                                    self.price = self.main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[i]))[1].split('<')[0]
+                                    break
+                                except:
+                                    try:
+                                        self.price = self.main_product.split('price J-p-')[1].split('{}">'.format(self.sku_temp[i]))[1].split('<')[0]
+                                        break
+                                    except:
+                                        continue
                         except:
                             try:
-                                price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx + 1))
+                                price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx - 1))
                                 price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
                             except:
-                                pass
-
+                                try:
+                                    price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx + 1))
+                                    price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
+                                except:
+                                    pass
                     try:
-                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0]
+                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('https://','').replace('http://','').replace('//img','img')
                     except:
                         img_xpath = '//*[@id="spec-img"]'
-                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0]
+                        temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, img_xpath))).get_attribute('jqimg').split('.avif')[0].replace('https://','').replace('http://','').replace('//img','img')
 
+                    if price_temp == '':
+                        self.driver.refresh()
+                        time.sleep(5)
+                        try:
+                            main_product = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR,'div.itemInfo-wrap'))).get_attribute('innerHTML')
+                            for nn in range(len(self.sku_temp)):
+                                try:
+                                    price_temp = main_product.split('p-price')[1].split('{}">'.format(self.sku_temp[nn]))[1].split('<')[0]
+                                    break
+                                except:
+                                    continue
+                        except:
+                            try:
+                                price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx - 1))
+                                price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
+                            except:
+                                try:
+                                    price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx + 1))
+                                    price_temp = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, price_css))).text.replace("￥", "").replace(" ", "")
+                                except:
+                                    pass
+                                
                     prices.append(float(price_temp))
                     option1_list.append(option1_total[n] + ';' + temp)
                     option1_total[n] += '/' + price_temp
                     max_price = abs(max(prices) - min(prices)) / min(prices) * 100
                     
-                    # if max_price >= 300.0:
-                    #     if self.search_type == 1:
-                    #         self.text.run('{}페이지 {}번째 아이템의 옵션가격이 본품 금액의 300% 이상입니다. 다음 아이템으로 넘어갑니다'.format(self.i + 1, self.j + 1))
-                    #     else:
-                    #         self.text.run('{}-{}번째 아이템의 옵션가격이 본품 금액의 300% 이상입니다. 다음 아이템으로 넘어갑니다'.format(self.i+1, self.sub_idx+1))
-                    #     option1_list = []
-                    #     option1_total = []
-                    #     prices = []
-                    #     self.no_crawl = True
-                    #     break
-                    # elif min(prices) <= float(self.price) / 2:
-                    #     if self.search_type == 1:
-                    #         self.text.run('{}페이지 {}번째 아이템의 옵션가격이 본품 금액의 -50% 이하입니다. 다음 아이템으로 넘어갑니다'.format(self.i + 1, self.j + 1))
-                    #     else:
-                    #         self.text.run('{}-{}번째 아이템의 옵션가격이 본품 금액의 -50% 이하입니다. 다음 아이템으로 넘어갑니다'.format(self.i+1, self.sub_idx+1))
-                    #     option1_list = []
-                    #     option1_total = []
-                    #     prices = []
-                    #     self.no_crawl = True
-                    #     break
+                    self.driver.close()
+                    time.sleep(0.5)
+                    if max_price >= 300.0:
+                        if self.search_type == 1:
+                            self.text.run('{}페이지 {}번째 아이템의 옵션가격이 본품 금액의 300% 이상입니다. 다음 아이템으로 넘어갑니다'.format(self.i + 1, self.j + 1))
+                        else:
+                            self.text.run('{}-{}번째 아이템의 옵션가격이 본품 금액의 300% 이상입니다. 다음 아이템으로 넘어갑니다'.format(self.i+1, self.sub_idx+1))
+                        option1_list = []
+                        option1_total = []
+                        prices = []
+                        self.no_crawl = True
+                        break
+                    elif min(prices) <= float(self.price) / 2:
+                        if self.search_type == 1:
+                            self.text.run('{}페이지 {}번째 아이템의 옵션가격이 본품 금액의 -50% 이하입니다. 다음 아이템으로 넘어갑니다'.format(self.i + 1, self.j + 1))
+                        else:
+                            self.text.run('{}-{}번째 아이템의 옵션가격이 본품 금액의 -50% 이하입니다. 다음 아이템으로 넘어갑니다'.format(self.i+1, self.sub_idx+1))
+                        option1_list = []
+                        option1_total = []
+                        prices = []
+                        self.no_crawl = True
+                        break
                 
                 # if self.no_crawl == False:
                 #     for i in range(len(sku)):
-                #         self.sku_id.append(sku_temp[i])
+                #         self.sku_id.append(self.sku_temp[i])
 
         return option1_total, option1_list, option2_list, prices
     
@@ -1272,26 +1567,26 @@ class MyWindow(QMainWindow, form_class):
                         img_temp[i] = img_temp[i].split('data-big-img=')[1]
                     if 'http://' in img_temp[i] or 'https://' in img_temp[i]:
                         if 'blank' not in img_temp[i]:
-                            detail_imgs.append(img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                            detail_imgs.append(img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
                     else:
                         if 'blank' not in img_temp[i]:
                             if '//img' not in img_temp[i]:
-                                detail_imgs.append('https://' + img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                                detail_imgs.append('https://' + img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
                             else:
-                                detail_imgs.append('https:' + img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                                detail_imgs.append('https:' + img_temp[i].split(');')[0].replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
             else:
                 for i in range(len(img_temp)):
                     if 'data-big-img' in img_temp[i]:
                         img_temp[i] = img_temp[i].split('data-big-img=')[1]
                     if 'http://' in img_temp[i] or 'https://' in img_temp[i]:
                         if 'blank' not in img_temp[i]:
-                            detail_imgs.append(img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                            detail_imgs.append(img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
                     else:
                         if 'blank' not in img_temp[i]:
                             if '//img' not in img_temp[i]:
-                                detail_imgs.append('https://' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                                detail_imgs.append('https://' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
                             else:
-                                detail_imgs.append('https:' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                                detail_imgs.append('https:' + img_temp[i].split('">')[0].replace('"','').replace(" alt=", '').split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
         except:
             try:
                 img_temp = self.driver.find_element(By.XPATH, '//*[@id="J-detail-content"]').get_attribute('innerHTML').split('url(//')[1:]
@@ -1301,13 +1596,13 @@ class MyWindow(QMainWindow, form_class):
             for i in range(len(img_temp)):
                 if 'http://' in img_temp[i] or 'https://' in img_temp[i]:
                     if 'blank' not in img_temp[i]:
-                        detail_imgs.append(img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                        detail_imgs.append(img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
                 else:
                     if 'blank' not in img_temp[i]:
                         if '//img' not in img_temp[i]:
-                            detail_imgs.append('https://' + img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                            detail_imgs.append('https://' + img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
                         else:
-                            detail_imgs.append('https:' + img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0])
+                            detail_imgs.append('https:' + img_temp[i].split(');')[0].split('ssd-module-wrap')[0].replace(')}', '').split('\n')[0].split('.avif')[0])
             
         return ret, detail_imgs
 

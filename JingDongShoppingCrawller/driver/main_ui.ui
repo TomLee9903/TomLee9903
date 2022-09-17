@@ -240,6 +240,19 @@
        <string>검색 방법</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <item row="1" column="0">
+        <widget class="QRadioButton" name="image_radio">
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>이미지 검색</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QRadioButton" name="item_name_radio">
          <property name="font">
@@ -256,16 +269,10 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QRadioButton" name="image_radio">
-         <property name="font">
-          <font>
-           <family>맑은 고딕</family>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="initial_setting">
          <property name="text">
-          <string>이미지 검색</string>
+          <string>초기 설정</string>
          </property>
         </widget>
        </item>
