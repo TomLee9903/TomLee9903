@@ -77,6 +77,7 @@ class MyWindow(QMainWindow, form_class):
         self.text = TextBrowser()               # UI에 text 출력 위한 객체
         self.translator = google.Translator()
         self.extra = False
+        self.skip_option = False
         #self.silent_mode = True
 		
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
@@ -165,7 +166,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22090913')
+        self.text.run('PGM ver : 22092116-Final')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -173,7 +174,6 @@ class MyWindow(QMainWindow, form_class):
         self.sku_id = []
         self.final_cnt = 0
         self.restart = False
-        self.skip_option = False
         self.i = 0
         self.idx = 0
         self.search_url = ""
@@ -205,10 +205,10 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 URL 오픈
     @pyqtSlot()
     def OpenUrl(self):
-        try:
-            shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
-        except FileNotFoundError:
-            pass
+        # try:
+        #     shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
+        # except FileNotFoundError:
+        #     pass
         
         try:
             subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
@@ -480,16 +480,7 @@ class MyWindow(QMainWindow, form_class):
                     if num_list == 6:
                         row_num += 1
                         num_list = 1
-                # elif num_temp == 2:
-                #     try:
-                #         id = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#recyclerview > div')))[0].get_attribute('innerHTML').split('div id="')[4]
-                #         temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="{}"]/div[1]/div/div/div[2]/div[{}]/a'.format(id,self.j+1))))[0]
-                #     except:
-                #         id = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#recyclerview > div')))[0].get_attribute('innerHTML').split('div id="')
-                #         for i in range(len(id)):
-                #             id[i] = id[i].split('" mod-name')[0]
-                #         temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="3844664960-3"]/div/div/div[2]/div[1]/div/div[1]/div'
-                
+
                 self.ac.move_to_element(temp).pause(0.5).click().perform()
                 time.sleep(1)
             except:
@@ -510,10 +501,53 @@ class MyWindow(QMainWindow, form_class):
                                 self.restart = True
 
                                 return 1
+
+                            self.text.run('웹페이지를 새로고침 합니다.')
                             self.driver.refresh()
+                            time.sleep(5)
+                            self.driver.execute_script("window.scrollTo(0, 0)")
+                            time.sleep(2)
+
+                            # 페이지 스크롤 최대치로 내리기            
+                            before_h = self.driver.execute_script('return window.scrollY')
+                            page_cnt = 0
+                            while(True):
+                                self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
+                                time.sleep(1)
+                                after_h = self.driver.execute_script('return window.scrollY') 
+
+                                if after_h == before_h or page_cnt == 20:
+                                    break
+                                else:
+                                    before_h = after_h
+                                page_cnt += 1
+                            
+                            before_h = 0
+                            after_h = 0
                             time.sleep(1)
                             try:
-                                temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="root"]/div/div[1]/div[2]/div[2]/div/div[2]/div[{}]'.format(str(self.j + 1)))))[0]
+                                if num_temp == 0:
+                                    if sub_idx == 0:
+                                        temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.page-content > div.main-content > div.right-menu > div > div.JIIxO > div:nth-child({}) > a > img'.format(self.j+1))))[0]
+                                    elif sub_idx == 1:
+                                        temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div > div.main-content > div.right-menu > div > div.JIIxO > a:nth-child({})'.format(self.j+1))))[0]
+                                    elif sub_idx == 2:
+                                        if len(id_list) > 0:
+                                            temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="{}"]/div[{}]/div/div[{}]/a'.format(id_list[-1], row_num, num_list))))[0]
+                                            num_list += 1
+                                            if num_list == 6:
+                                                row_num += 1
+                                                num_list = 1
+                                elif num_temp == 1:
+                                    if len(id_list) > 0:
+                                        temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="{}"]/div[{}]/div/div[{}]/a'.format(id_list[-1], row_num, num_list))))[0]
+                                        num_list += 1
+                                        if num_list == 6:
+                                            row_num += 1
+                                            num_list = 1
+                                    else:
+                                        temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div > div.main-content > div.right-menu > div > div.JIIxO > a:nth-child({})'.format(self.j+1))))[0]
+                                        
                                 self.ac.move_to_element(temp).pause(0.5).click().perform()
                                 time.sleep(1)
                                 break
@@ -747,7 +781,6 @@ class MyWindow(QMainWindow, form_class):
 
                 first_tab = self.driver.window_handles[0]
                 self.driver.switch_to.window(window_name=first_tab)
-                time.sleep(self.process_delay)
 
             if self.final_cnt == (self.cnt_page * 60) - 1:
                 self.final_cnt += 1
@@ -848,28 +881,32 @@ class MyWindow(QMainWindow, form_class):
             self.no_crawl = True
             option1_total = []
             option1_list = []
+            option2_list = []
             prices = []
 
             return option1_total, option1_list, option2_list, prices
 
         if len(prop_temp) > 0:
             for i in range(len_prop_temp):
-                tt = list(prop_temp[i*2+1].split('sku-property-text"><span>')[1:])
-                if len(tt) == 0:
-                    tt = list(prop_temp[i*2+1].split(' title="')[1:])
+                tt = list(prop_temp[i*2+1].split(' title="')[1:])
+                if len(tt) != 0 and ('sku-property-text"><span>' in prop_temp[i*2+1] and 'sku-property-image' in prop_temp[i*2+1]):
+                    self.text.run('{}페이지 {}번째 아이템은 이미지가 있는 옵션/없는 옵션이 섞인 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                    self.no_crawl = True
+                    option1_total = []
+                    option1_list = []
+                    option2_list = []
+                    prices = []
+
+                    return option1_total, option1_list, option2_list, prices
+
+                if len(tt) == 0 or (len(tt) != 0 and '" type="button" class=' in tt[0]):
+                    tt = list(prop_temp[i*2+1].split('sku-property-text"><span>')[1:])
+
                 for j in range(len(tt)):
                     options[i].append(tt[j].split('</')[0] + ';')
 
-        if len(options[2]) == 0:
-            del options[2]
-                
-        if len(options[1]) == 0:
-            del options[1]
-            
         if len(options) >= 2 and len(options[1]) != 0:
             option2_list = options[1]
-        if len(options) == 3 and len(options[2]) != 0:
-            option3_list = options[2]
 
         sku = self.product_main.split('ae_object_value')[1].split('" st_')[0].replace('="','')
         if sku in self.sku_id:
@@ -878,108 +915,81 @@ class MyWindow(QMainWindow, form_class):
             self.no_crawl = True
             option1_total = []
             option1_list = []
+            option2_list = []
             prices = []
 
             return option1_total, option1_list, option2_list, prices
         else:
             self.sku_id.append(sku)
 
-        temp1 = self.product_main.split('title=')[1:]
-        for i in range(len(temp1)):
-            if 'img src=' in temp1[i] or 'class="product-quantity' in temp1[i]:
-                temp.append(temp1[i])
-
-        if len(temp) == 0:
-            temp.append(self.product_main.split('<span class="sku-title-value">')[1].split('</span')[0])
-
-        if len(temp) > 30:
+        if len(options[0]) > 30:
             self.text.run('{}페이지 {}번째 아이템의 옵션 갯수를 30개로 한정합니다.'.format(self.i + 1, self.j + 1))
             option1_total = []
             option1_list = []
+            option2_list = []
             prices = []
             self.no_crawl = True
 
             return option1_total, option1_list, option2_list, prices
 
+        del_idx = 0
+        for i in range(len(options[0])):
+            if '" type="button"' in options[0][i - del_idx]:
+                del options[0][i - del_idx]
+                del_idx += 1
+        
+        del_idx = 0
+        if len(options[1]) != 0:
+            for i in range(len(options[1])):
+                if '" type="button"' in options[1][i - del_idx]:
+                    del options[1][i - del_idx]
+                    del_idx += 1
+                options[1][i - del_idx] = options[1][i - del_idx].split('" alt=')[0].split(';')[0] + ';'
+
         if self.skip_option == True:
-            if len(temp) > 1:
+            if len(options[0]) > 1:
                 self.text.run('{}페이지 {}번째 아이템은 옵션이 있는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.no_crawl = True
                 return option1_total, option1_list, option2_list, prices
-        
+                
         imgs = self.product_main.split('sku-property-image')[1:]
-        # for i in range(len(temp)):
-        #     if len(imgs) != 0:
-        #         temp_split = temp[i].split('" alt')[0].split('"></span')[0].replace('"','')
-        #         img_split = imgs[i].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg','')
-        #     else:
-        #         temp_split = temp[i]
-        #         img_split = self.img_url
-        #     if self.translate == True:
-        #         translated_text = self.TranslateGoogle(temp_split, 'ko')
-        #     else:
-        #         translated_text = temp_split
+        for i in range(len(options[0])):
+            if len(imgs) != 0 and len(imgs) == len(options[0]):
+                temp_split = options[0][i].split('" alt')[0].split('"></span')[0].replace('"','')
+                img_split = imgs[i].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg','')
+            else:
+                temp_split = options[0][i]
+                img_split = self.img_url
+            if self.translate == True:
+                translated_text = self.TranslateGoogle(temp_split, 'ko')
+            else:
+                translated_text = temp_split
 
-        #     option1_list.append(translated_text + ';' + img_split.replace('https://', '').replace('http://',''))
+            option1_list.append(translated_text.split(';')[0] + ';' + img_split.replace('https://', '').replace('http://',''))
         
-        #     if '.png' in option1_list[i]:
-        #         option1_list[i] = option1_list[i].split('_.webp')[0].replace('"','').replace('_50x50.png','').replace('https://', '').replace('http://','').replace('.png', '') + '.png'
-        idx = 0
+            if '.png' in option1_list[i]:
+                option1_list[i] = option1_list[i].split('_.webp')[0].replace('"','').replace('_50x50.png','').replace('https://', '').replace('http://','').replace('.png', '') + '.png'
+
         pre_product_main = ''
-        if len(option3_list) != 0:
-            for i in range(len(option3_list)):
-                try:
-                    self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(3) > ul > li:nth-child({}) > div'.format(i+1)).click()
-                    time.sleep(0.5)
-                    try:
-                        product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                    except:
-                        product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
+        pre_price = ''
+        del_idx = 0
+        for i in range(len(options[0])):
+            try:
+                self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(i+1)).click()
+                time.sleep(0.2)
 
-                    if pre_product_main == product_main:
-                        time.sleep(0.5)
-                        product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                    try:
-                        price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                    except:
+                if len(option2_list) != 0:
+                    for j in range(len(option2_list)):
                         try:
-                            price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                        except:
-                            price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                    if ' - ' in price:
-                        self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(3) > ul > li:nth-child({}) > div'.format(i+1)).click()
-                        time.sleep(0.5)
-                        try:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                        except:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                        if pre_product_main == product_main:
-                            time.sleep(0.5)
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                        try:
-                            price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                        except:
-                            try:
-                                price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                            except:
-                                price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                    for n in range(len(option2_list)):
-                        try:
-                            self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(2) > ul > li:nth-child({}) > div'.format(n+1)).click()
-                            time.sleep(0.5)
+                            self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(2) > ul > li:nth-child({}) > div'.format(j+1)).click()
+                            time.sleep(0.2)
                         except:
                             self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
                             continue
-                        try:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                        except:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
+                        
+                        product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
                         if pre_product_main == product_main:
-                            time.sleep(0.5)
+                            time.sleep(0.1)
                             product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
 
                         try:
@@ -990,25 +1000,6 @@ class MyWindow(QMainWindow, form_class):
                             except:
                                 price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
                         if ' - ' in price:
-                            self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(2) > ul > li:nth-child({}) > div'.format(n+1)).click()
-                            time.sleep(0.5)
-                            try:
-                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                            except:
-                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                            if pre_product_main == product_main:
-                                time.sleep(0.5)
-                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                            try:
-                                price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                            except:
-                                try:
-                                    price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                                except:
-                                    price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                        for j in range(len(temp)):
                             try:
                                 self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(j+1)).click()
                                 time.sleep(0.5)
@@ -1031,18 +1022,68 @@ class MyWindow(QMainWindow, form_class):
                                     price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
                                 except:
                                     price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                            if ' - ' in price:
-                                self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(j+1)).click()
-                                time.sleep(0.5)
-                                try:
-                                    product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                                except:
-                                    product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
+                                        
+                        prices.append(float(price.replace(',','')))
+                        option1_total.append(option1_list[i - del_idx].split(';')[0] + ' + ' + option2_list[j - del_idx].split(';')[0] + '/' + price)
+                        if j != 0 and pre_price != price:
+                            self.text.run('옵션2에 따라 가격 변동이 있는 상품입니다. 다음 아이템으로 넘어갑니다.')
+                            self.no_crawl = True
+                            option1_total = []
+                            option1_list = []
+                            option2_list = []
+                            prices = []
 
+                            return option1_total, option1_list, option2_list, prices
+                                         
+                        pre_product_main = product_main
+                        pre_price = price
+                else:
+                    product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
+                    if pre_product_main == product_main:
+                        time.sleep(0.2)
+                        product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
+                    try:
+                        price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
+                    except:
+                        try:
+                            price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
+                        except:
+                            price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
+                    if ' - ' in price:
+                        try:
+                            if len(option2_list) != 0:
+                                for dd in range(len(option2_list)):
+                                    try:
+                                        self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(2) > ul > li:nth-child({}) > div'.format(dd+1)).click()
+                                        time.sleep(0.2)
+                                        break
+                                    except:
+                                        self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
+                                        continue                            
+                        except:
+                            self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
+                            continue
+                        
+                        product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
+                        if pre_product_main == product_main:
+                            time.sleep(0.2)
+                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
+                        try:
+                            price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
+                        except:
+                            try:
+                                price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
+                            except:
+                                price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
+
+                        while True:
+                            if ' - ' in price:                                
+                                self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(i+1)).click()
+                                time.sleep(0.2)
+                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
                                 if pre_product_main == product_main:
-                                    time.sleep(0.5)
+                                    time.sleep(0.2)
                                     product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
                                 try:
                                     price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
                                 except:
@@ -1050,163 +1091,18 @@ class MyWindow(QMainWindow, form_class):
                                         price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
                                     except:
                                         price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                            
-                            prices.append(float(price.replace(',','')))
-
-                            if len(imgs) != 0:
-                                temp_split = temp[j].split('" alt')[0].split('"></span')[0].replace('"','')
-                                img_split = imgs[j].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg','')
+                                if ' - ' not in price:
+                                    break
                             else:
-                                temp_split = temp[j]
-                                img_split = self.img_url
-                            if self.translate == True:
-                                translated_text = self.TranslateGoogle(temp_split, 'ko')
-                            else:
-                                translated_text = temp_split
+                                break
 
-                            option1_list.append(translated_text + ' + ' + option2_list[n].split(';')[0] + ' + ' + option3_list[i].split(';')[0] + ';' + img_split.replace('https://', '').replace('http://',''))
-                            if '.png' in option1_list[j]:
-                                option1_list[j] = option1_list[j].split('_.webp')[0].replace('"','').replace('_50x50.png','').replace('https://', '').replace('http://','').replace('.png', '') + '.png'
-
-                            option1_total.append(option1_list[idx].split(';')[0] + '/' + price)
-                            idx += 1
-                            pre_product_main = product_main
-                except:
-                    self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                    continue
-        elif len(option3_list) == 0 and len(option2_list) != 0:
-            for i in range(len(option2_list)):
-                try:
-                    self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div:nth-child(2) > ul > li:nth-child({}) > div'.format(i+1)).click()
-                    time.sleep(0.5)
-                    for j in range(len(temp)):
-                        try:
-                            self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(j+1)).click()
-                            time.sleep(0.5)
-                        except:
-                            self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                            continue
-                        try:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                        except:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                        if pre_product_main == product_main:
-                            time.sleep(0.5)
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                        try:
-                            price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                        except:
-                            try:
-                                price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                            except:
-                                price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                        if ' - ' in price:
-                            try:
-                                self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(j+1)).click()
-                                time.sleep(0.5)
-                            except:
-                                self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                                continue
-                            try:
-                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                            except:
-                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                            if pre_product_main == product_main:
-                                time.sleep(0.5)
-                                product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                            try:
-                                price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                            except:
-                                try:
-                                    price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                                except:
-                                    price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                        
-                        prices.append(float(price.replace(',','')))
-
-                        if len(imgs) != 0:
-                            temp_split = temp[j].split('" alt')[0].split('"></span')[0].replace('"','')
-                            img_split = imgs[j].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg','')
-                        else:
-                            temp_split = temp[j]
-                            img_split = self.img_url
-                        if self.translate == True:
-                            translated_text = self.TranslateGoogle(temp_split, 'ko')
-                        else:
-                            translated_text = temp_split
-
-                        option1_list.append(translated_text + ' + ' + option2_list[i].split(';')[0] + ';' + img_split.replace('https://', '').replace('http://',''))
-                        if '.png' in option1_list[j]:
-                            option1_list[j] = option1_list[j].split('_.webp')[0].replace('"','').replace('_50x50.png','').replace('https://', '').replace('http://','').replace('.png', '') + '.png'
-                        
-                        option1_total.append(option1_list[idx].split(';')[0] + '/' + price)
-                        idx += 1
-                        
-                        pre_product_main = product_main
-                except:
-                    self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                    continue
-        else:
-            for i in range(len(options[0])):
-                try:
-                    self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(i+1)).click()
-                    time.sleep(0.5)
-                
-                    product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                    try:
-                        price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                    except:
-                        try:
-                            price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                        except:
-                            price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
-                    if ' - ' in price:
-                        self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.product-main > div > div.product-info > div.product-sku > div > div > ul > li:nth-child({})'.format(i+1)).click()
-                        time.sleep(0.5)
-                        try:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-                        except:
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                        if pre_product_main == product_main:
-                            time.sleep(0.5)
-                            product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.product-main')))[0].get_attribute('innerHTML')
-
-                        try:
-                            price = product_main.split('product-price-original')[1].split('US $')[1].split('</span>')[0]
-                        except:
-                            try:
-                                price = product_main.split('uniform-banner-box-discounts')[1].split('US $')[1].split('</span>')[0]
-                            except:
-                                price = product_main.split('product-price-value')[1].split('US $')[1].split('</span>')[0]
                     prices.append(float(price.replace(',','')))
-
-                    if len(imgs) != 0:
-                        temp_split = options[0][i].split('" alt')[0].split('"></span')[0].replace('"','')
-                        img_split = imgs[i].split('img src=')[1].split('_.webp')[0].replace('"','').replace('_50x50.jpg','')
-                    else:
-                        temp_split = options[0][i]
-                        img_split = self.img_url
-                    if self.translate == True:
-                        translated_text = self.TranslateGoogle(temp_split, 'ko')
-                    else:
-                        translated_text = temp_split
-
-                    option1_list.append(translated_text.split(';')[0] + ';' + img_split.replace('https://', '').replace('http://',''))
-                    if '.png' in option1_list[i]:
-                        option1_list[i] = option1_list[i].split('_.webp')[0].replace('"','').replace('_50x50.png','').replace('https://', '').replace('http://','').replace('.png', '') + '.png'
-
-                    option1_total.append(option1_list[idx].split(';')[0] + '/' + price)
-                    idx += 1
-
-                    pre_product_main = product_main
-                except:
-                    self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                    continue
+                    option1_total.append(option1_list[i - del_idx].split(';')[0] + '/' + price)
+            except:
+                self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
+                del option1_list[i - del_idx]
+                del_idx += 1
+                continue
 
         if len(prices) != 0 and len(prices) > 1:
             max_price = abs(max(prices) - min(prices)) / min(prices) * 100                
@@ -1256,7 +1152,7 @@ class MyWindow(QMainWindow, form_class):
         #     self.text.run('검색버튼 클릭에 실패했습니다.')
         #     self.restart = True
         #     return 0
-
+        self.text.run('상품명 검색 : {} 에 성공했습니다.'.format(self.item_text))
         time.sleep(self.process_delay)
 
     def CleanText(self, inputString):
