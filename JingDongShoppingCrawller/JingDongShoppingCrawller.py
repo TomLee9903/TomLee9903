@@ -835,8 +835,7 @@ class MyWindow(QMainWindow, form_class):
             self.j = 0
             self.final_cnt = 0
         
-        self.search_url = self.driver.current_url
-        time.sleep(2)
+        a = self.driver.current_url
         # 페이지 스크롤 최대치로 내리기            
         before_h = self.driver.execute_script('return window.scrollY')
         while(True):
@@ -878,6 +877,9 @@ class MyWindow(QMainWindow, form_class):
                 try:
                     first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
+                    self.search_url = self.driver.current_url
+                    time.sleep(2)
+
                     if search_idx == 0:
                         temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
                     else:
