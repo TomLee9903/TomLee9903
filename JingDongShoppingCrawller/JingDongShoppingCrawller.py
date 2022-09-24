@@ -263,7 +263,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22092423')
+        self.text.run('PGM ver : 22092423-1')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -819,7 +819,10 @@ class MyWindow(QMainWindow, form_class):
                 self.ac.move_to_element(search_click).click().pause(2).perform()
 
                 url = self.driver.current_url
-                link_name = url.split('keyword=')[1].split('&')[0]
+                try:
+                    link_name = url.split('keyword=')[1].split('&')[0]
+                except:
+                    link_name = 'category'
                    
                 self.translated_name = self.CleanText(parse.unquote(link_name))
 
@@ -832,7 +835,7 @@ class MyWindow(QMainWindow, form_class):
             self.j = 0
             self.final_cnt = 0
         
-        a = self.driver.current_url
+        self.search_url = self.driver.current_url
         time.sleep(2)
         # 페이지 스크롤 최대치로 내리기            
         before_h = self.driver.execute_script('return window.scrollY')
@@ -853,6 +856,13 @@ class MyWindow(QMainWindow, form_class):
             end_tab_idx = 1
         else:
             end_tab_idx = 2
+        
+        search_idx = 0
+        try:
+            temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[1]/div/div[1]/a/img')))[0]
+        except:
+            temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="plist"]/ul/li[1]/div/div[1]/a/img')))[0]
+            search_idx = 1
         #while self.i < self.cnt_page:
         #while self.j < 60:
         while True:
@@ -868,9 +878,15 @@ class MyWindow(QMainWindow, form_class):
                 try:
                     first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
-                    temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
+                    if search_idx == 0:
+                        temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
+                    else:
+                        temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="plist"]/ul/li[{}]/div/div[1]/a/img'.format(self.j + 1))))[0]
                     self.ac.move_to_element(temp).pause(0.5).click().perform()
                     time.sleep(1)
+                    # 징동닷컴검색선택링크주소
+                    last_tab = self.driver.window_handles[-1]
+                    self.driver.switch_to.window(window_name=last_tab)
                 except:
                     self.text.run('이미지 클릭에 실패했습니다.')
                     self.driver.refresh()
@@ -889,6 +905,7 @@ class MyWindow(QMainWindow, form_class):
                     continue
                 
                 try:
+                    
                     WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'body > div:nth-child(10) > div')))
                     break
                 except:
@@ -897,12 +914,6 @@ class MyWindow(QMainWindow, form_class):
                     time.sleep(5)
                     continue
 
-            self.search_url = self.driver.current_url
-            time.sleep(2)
-            
-            # 징동닷컴검색선택링크주소
-            last_tab = self.driver.window_handles[-1]
-            self.driver.switch_to.window(window_name=last_tab)
             try:
                 select_url = self.driver.current_url
             except:
@@ -1280,9 +1291,16 @@ class MyWindow(QMainWindow, form_class):
                         self.ReLogin()
                         continue
                     except:
-                        last_tab = self.driver.window_handles[-1]
-                        self.driver.switch_to.window(window_name=last_tab)
-                        self.text.run('옵션1 이미지를 가져오는데 실패했습니다.')
+                        if len(self.driver.window_handles) != 1:
+                            for n in range(len(self.driver.window_handles) - end_tab_idx):
+                                last_tab = self.driver.window_handles[-1]
+                                self.driver.switch_to.window(window_name=last_tab)
+                                self.driver.close()
+                            first_tab = self.driver.window_handles[end_tab_idx - 1]
+                            self.driver.switch_to.window(window_name=first_tab)
+                            time.sleep(self.process_delay)
+
+                        self.text.run('옵션1 이미지를 가져오는데 실패했습니다. 다음 아이템으로 넘어갑니다.')
                         current_url = self.driver.current_url
                         if current_url != select_url:
                             self.j += 1
@@ -1473,6 +1491,7 @@ class MyWindow(QMainWindow, form_class):
         offset = 0
         if self.item_type == 1:
             offset = 1
+
         for n in range(0, len_option_total):
             if self.option_translate == True and len(self.option1_total) != 0:
                 self.option1_total[n] = self.TranslateGoogle(self.option1_total[n], 'ko')
