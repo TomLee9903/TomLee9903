@@ -49,6 +49,7 @@ import random
 import pywinauto
 import pygetwindow as gw
 import googletrans as google
+from urllib import parse
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -101,6 +102,7 @@ class MyWindow(QMainWindow, form_class):
         self.option_translate = False
         self.translator = google.Translator()
         self.driver = ''
+        self.item_type = 0
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
@@ -112,6 +114,9 @@ class MyWindow(QMainWindow, form_class):
         self.item_translate_btn.clicked.connect(self.SetItemTranslate)
         self.option_translate_btn.clicked.connect(self.SetOptionTranslate)
         self.initial_setting.clicked.connect(self.OpenInitialSetting)
+        self.login_btn.clicked.connect(self.StartLogin)
+        self.item_radio.clicked.connect(self.SetItempType)
+        self.category_radio.clicked.connect(self.SetItempType)
 
     # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
     def closeEvent(self, QCloseEvent): 
@@ -188,7 +193,14 @@ class MyWindow(QMainWindow, form_class):
             self.option_translate = True
         else:
             self.option_translate = False
-    
+
+    def SetItempType(self):
+        if self.item_radio.isChecked():
+            self.item_type = 0
+
+        elif self.category_radio.isChecked():
+            self.item_type = 1
+
     def OpenInitialSetting(self):
         if self.driver == '':
             try:
@@ -226,10 +238,32 @@ class MyWindow(QMainWindow, form_class):
 
         time.sleep(self.process_delay)
 
+    def StartLogin(self):
+        if self.restart == False:
+            self.OpenUrl()
+        else:
+            ret = self.Restart()
+        
+        while True:
+            ret = self.Login()
+            if ret == 1:
+                break
+            else:
+                self.restart = True
+        
+        time.sleep(3)
+        # 로그인 됐는지 확인하는 명령
+        try:
+            WebDriverWait(self.driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#key')))
+            self.text.run('로그인에 성공했습니다')
+        except:
+            self.text.run('로그인에 실패했습니다.')
+            return 0
+
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22091822')
+        self.text.run('PGM ver : 22092423')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -251,18 +285,6 @@ class MyWindow(QMainWindow, form_class):
             self.tb_temp = [[""] * 22 for i in range(self.cnt_page * 60)]
             self.tb_temp = pd.DataFrame(self.tb_temp)
             self.tb_temp.columns = self.columns
-            
-        if self.restart == False:
-            self.OpenUrl()
-        else:
-            ret = self.Restart()
-        
-        while True:
-            ret = self.Login()
-            if ret == 1:
-                break
-            else:
-                self.restart = True
 
         if self.search_type == 0:
             ret = self.CrawlDataWithImage()
@@ -444,15 +466,7 @@ class MyWindow(QMainWindow, form_class):
     def CrawlDataWithImage(self):
         self.login_xpath = '//*[@id="banner-bg"]'
         self.ac = ActionChains(self.driver)  # 셀레니움 동작을 바인딩 하여 동작 할 수 있게 하는 모듈
-        
-        # 로그인 됐는지 확인하는 명령
-        try:
-            WebDriverWait(self.driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#key')))
-            self.text.run('로그인에 성공했습니다')
-        except:
-            self.text.run('로그인에 실패했습니다.')
-            return 0
-        
+                
         if self.restart == True and self.search_url != '':
             self.driver.get(self.search_url)
             time.sleep(self.process_delay)
@@ -791,32 +805,35 @@ class MyWindow(QMainWindow, form_class):
     def CrawlDataWithItemName(self):
         self.login_xpath = '//*[@id="banner-bg"]'
         self.ac = ActionChains(self.driver)  # 셀레니움 동작을 바인딩 하여 동작 할 수 있게 하는 모듈
-        
-        # 로그인 됐는지 확인하는 명령
-        try:
-            WebDriverWait(self.driver, 50).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#key')))
-            self.text.run('로그인에 성공했습니다')
-        except:
-            self.text.run('로그인에 실패했습니다.')
-            return 0
+        last_tab = self.driver.window_handles[-1]
+        self.driver.switch_to.window(window_name=last_tab)
         
         if self.restart == True and self.search_url != '':
             self.driver.get(self.search_url)
             time.sleep(self.process_delay)
-
         else:
-            if self.item_translate == True:
-                self.translated_name = self.TranslateChinese(self.item_name.text())
-            else:
+            if self.item_type == 0:
                 self.translated_name = self.item_name.text()
-            self.ClickSearchButton()
+            else:
+                search_click = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#search-2014 > div > button')))
+                self.ac.move_to_element(search_click).click().pause(2).perform()
+
+                url = self.driver.current_url
+                link_name = url.split('keyword=')[1].split('&')[0]
+                   
+                self.translated_name = self.CleanText(parse.unquote(link_name))
+
+            if self.item_translate == True:
+                self.translated_name = self.TranslateChinese(self.translated_name)
+            
+            if self.item_type == 0:
+                self.ClickSearchButton()
+            
             self.j = 0
             self.final_cnt = 0
-
-        # 댓글 많은 순으로 정렬
-        #WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#J_filter > div.f-line.top > div.f-sort > a:nth-child(3)'))).click()
         
-        time.sleep(5)
+        a = self.driver.current_url
+        time.sleep(2)
         # 페이지 스크롤 최대치로 내리기            
         before_h = self.driver.execute_script('return window.scrollY')
         while(True):
@@ -832,6 +849,10 @@ class MyWindow(QMainWindow, form_class):
         before_h = 0
         after_h = 0
         
+        if self.item_type == 0:
+            end_tab_idx = 1
+        else:
+            end_tab_idx = 2
         #while self.i < self.cnt_page:
         #while self.j < 60:
         while True:
@@ -845,13 +866,26 @@ class MyWindow(QMainWindow, form_class):
                     pass
             while True:
                 try:
-                    first_tab = self.driver.window_handles[-1]
+                    first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
                     temp = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="J_goodsList"]/ul/li[{}]/div/div[1]/a/img'.format(str(self.j + 1)))))[0]
                     self.ac.move_to_element(temp).pause(0.5).click().perform()
                     time.sleep(1)
                 except:
                     self.text.run('이미지 클릭에 실패했습니다.')
+                    self.driver.refresh()
+                    time.sleep(5)
+                    # 페이지 스크롤 최대치로 내리기            
+                    before_h = self.driver.execute_script('return window.scrollY')
+                    while(True):
+                        self.driver.find_element_by_css_selector('body').send_keys(Keys.END)
+                        time.sleep(1)
+                        after_h = self.driver.execute_script('return window.scrollY') 
+
+                        if after_h == before_h:
+                            break
+                        else:
+                            before_h = after_h
                     continue
                 
                 try:
@@ -859,11 +893,13 @@ class MyWindow(QMainWindow, form_class):
                     break
                 except:
                     self.text.run('이미지 클릭에 실패했습니다.')
+                    self.driver.refresh()
+                    time.sleep(5)
                     continue
 
             self.search_url = self.driver.current_url
             time.sleep(2)
-                    
+            
             # 징동닷컴검색선택링크주소
             last_tab = self.driver.window_handles[-1]
             self.driver.switch_to.window(window_name=last_tab)
@@ -880,15 +916,17 @@ class MyWindow(QMainWindow, form_class):
             except:
                 self.text.run('{}페이지 {}번째 아이템은 형식이 다른 아이템입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 if len(self.driver.window_handles) != 1:
-                    for n in range(len(self.driver.window_handles) - 1):
+                    for n in range(len(self.driver.window_handles) - end_tab_idx):
                         last_tab = self.driver.window_handles[-1]
                         self.driver.switch_to.window(window_name=last_tab)
                         self.driver.close()
-                    first_tab = self.driver.window_handles[0]
+                    first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
                     time.sleep(self.process_delay)
                 if self.j == 59:
                     try:
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
+                        self.driver.switch_to.window(window_name=first_tab)
                         self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                     except:
                         self.final_cnt += 1
@@ -919,15 +957,17 @@ class MyWindow(QMainWindow, form_class):
                 if pre_check != '':
                     self.text.run('{}페이지 {}번째 아이템은 옵션이 있는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                     if len(self.driver.window_handles) != 1:
-                        for n in range(len(self.driver.window_handles) - 1):
+                        for n in range(len(self.driver.window_handles) - end_tab_idx):
                             last_tab = self.driver.window_handles[-1]
                             self.driver.switch_to.window(window_name=last_tab)
                             self.driver.close()
-                        first_tab = self.driver.window_handles[0]
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
                         self.driver.switch_to.window(window_name=first_tab)
                         time.sleep(self.process_delay)
                     if self.j == 59:
                         try:
+                            first_tab = self.driver.window_handles[end_tab_idx - 1]
+                            self.driver.switch_to.window(window_name=first_tab)
                             self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                         except:
                             self.final_cnt += 1
@@ -974,7 +1014,7 @@ class MyWindow(QMainWindow, form_class):
                         sku_list.append(sku.split('" data-value')[0].split('="')[1])
             else:
                 sku_list_temp = self.main_product.split('data-sku')[1]
-                sku_list.append(sku_list_temp.split('" href')[0].split('="')[1])
+                sku_list.append(sku_list_temp.split('" href')[0].split('="')[1].split(' clstag')[0].replace('"',''))
 
             self.sku_temp = list(dict.fromkeys(sku_list))
 
@@ -985,16 +1025,18 @@ class MyWindow(QMainWindow, form_class):
                     self.text.run('{}-{}번째 아이템의 옵션 개수가 10개를 초과하였습니다. 다음 아이템으로 넘어갑니다.'.format(self.i+1, self.sub_idx+1))
                 
                 if len(self.driver.window_handles) != 1:
-                    for n in range(len(self.driver.window_handles) - 1):
+                    for n in range(len(self.driver.window_handles) - end_tab_idx):
                         last_tab = self.driver.window_handles[-1]
                         self.driver.switch_to.window(window_name=last_tab)
                         self.driver.close()
-                    first_tab = self.driver.window_handles[0]
+                    first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
                     time.sleep(self.process_delay)
 
                 if self.j == 59:
                     try:
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
+                        self.driver.switch_to.window(window_name=first_tab)
                         self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                     except:
                         self.final_cnt += 1
@@ -1033,16 +1075,18 @@ class MyWindow(QMainWindow, form_class):
 
             if no_crawl == True:
                 if len(self.driver.window_handles) != 1:
-                    for n in range(len(self.driver.window_handles) - 1):
+                    for n in range(len(self.driver.window_handles) - end_tab_idx):
                         last_tab = self.driver.window_handles[-1]
                         self.driver.switch_to.window(window_name=last_tab)
                         self.driver.close()
-                    first_tab = self.driver.window_handles[0]
+                    first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
                     time.sleep(self.process_delay)
 
                 if self.j == 59:
                     try:
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
+                        self.driver.switch_to.window(window_name=first_tab)
                         self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                     except:
                         self.final_cnt += 1
@@ -1074,22 +1118,22 @@ class MyWindow(QMainWindow, form_class):
                 time.sleep(0.5)
             
             tab_len = len(self.driver.window_handles)
-            if tab_len != len(self.sku_temp) + 2:
+            if tab_len != len(self.sku_temp) + end_tab_idx + 1:
                 if len(self.driver.window_handles) != 1:
-                    for n in range(len(self.driver.window_handles) - 1):
+                    for n in range(len(self.driver.window_handles) - end_tab_idx):
                         last_tab = self.driver.window_handles[-1]
                         self.driver.switch_to.window(window_name=last_tab)
                         self.driver.close()
                         time.sleep(1)
 
-                    first_tab = self.driver.window_handles[0]
+                    first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
                     time.sleep(self.process_delay)
 
                 self.text.run('팝업 차단으로 인해 옵션 탭이 열리지 않았습니다. 초기 설정 버튼 클릭 후 팝업 및 리디렉션 허용 후 재시작 바랍니다.')
                 return 1
 
-            first_option = self.driver.window_handles[1]
+            first_option = self.driver.window_handles[end_tab_idx]
             self.driver.switch_to.window(window_name=first_option)
             time.sleep(1)
 
@@ -1134,15 +1178,17 @@ class MyWindow(QMainWindow, form_class):
             if len(detail_imgs) == 0:
                 self.text.run('{}페이지 {}번째 상품의 상세페이지 가져오기를 실패했습니다. 다음 상품으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 if len(self.driver.window_handles) != 1:
-                    for n in range(len(self.driver.window_handles) - 1):
+                    for n in range(len(self.driver.window_handles) - end_tab_idx):
                         last_tab = self.driver.window_handles[-1]
                         self.driver.switch_to.window(window_name=last_tab)
                         self.driver.close()
-                    first_tab = self.driver.window_handles[0]
+                    first_tab = self.driver.window_handles[end_tab_idx - 1]
                     self.driver.switch_to.window(window_name=first_tab)
                     time.sleep(self.process_delay)
                 if self.j == 59:
                     try:
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
+                        self.driver.switch_to.window(window_name=first_tab)
                         self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                     except:
                         self.final_cnt += 1
@@ -1182,15 +1228,17 @@ class MyWindow(QMainWindow, form_class):
                     pass
                 if self.no_crawl == True:
                     if len(self.driver.window_handles) != 1:
-                        for n in range(len(self.driver.window_handles) - 1):
+                        for n in range(len(self.driver.window_handles) - end_tab_idx):
                             last_tab = self.driver.window_handles[-1]
                             self.driver.switch_to.window(window_name=last_tab)
                             self.driver.close()
-                        first_tab = self.driver.window_handles[0]
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
                         self.driver.switch_to.window(window_name=first_tab)
                         time.sleep(self.process_delay)
                     if self.j == 59:
                         try:
+                            first_tab = self.driver.window_handles[end_tab_idx - 1]
+                            self.driver.switch_to.window(window_name=first_tab)
                             self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                         except:
                             try:
@@ -1241,10 +1289,10 @@ class MyWindow(QMainWindow, form_class):
                             continue
                         else:
                             pass
-            first_tab = self.driver.window_handles[-1]
+            first_tab = self.driver.window_handles[end_tab_idx - 1]
             self.driver.switch_to.window(window_name=first_tab)
 
-            self.tb_temp[self.columns[0]][self.idx] = self.item_name.text()
+            self.tb_temp[self.columns[0]][self.idx] = self.translated_name
             self.tb_temp[self.columns[12]][self.idx] = self.search_url
             self.tb_temp[self.columns[13]][self.idx] = select_url
             if self.price == "暂无报价":
@@ -1259,7 +1307,7 @@ class MyWindow(QMainWindow, form_class):
             
             file_folder = '{}\\Desktop\\징동닷컴_결과물'.format(self.windows_user_name)
             print(file_folder)
-            filename = '{}\\{}'.format(file_folder, self.item_name.text() + '_JD_ItemName_results.xlsx')
+            filename = '{}\\{}'.format(file_folder, self.translated_name + '_JD_ItemName_results.xlsx')
             try:
                 if not os.path.isdir(file_folder):
                     os.mkdir(file_folder)
@@ -1276,13 +1324,13 @@ class MyWindow(QMainWindow, form_class):
             self.tb_temp.to_excel(filename, index=False)
             
             if len(self.driver.window_handles) != 1:
-                for n in range(len(self.driver.window_handles) - 1):
+                for n in range(len(self.driver.window_handles) - end_tab_idx):
                     last_tab = self.driver.window_handles[-1]
                     self.driver.switch_to.window(window_name=last_tab)
                     self.driver.close()
                     time.sleep(1)
 
-                first_tab = self.driver.window_handles[0]
+                first_tab = self.driver.window_handles[end_tab_idx - 1]
                 self.driver.switch_to.window(window_name=first_tab)
                 time.sleep(self.process_delay)
 
@@ -1303,6 +1351,8 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
                 if self.j == 59:
                     try:
+                        first_tab = self.driver.window_handles[end_tab_idx - 1]
+                        self.driver.switch_to.window(window_name=first_tab)
                         self.driver.find_element_by_xpath('//*[@id="J_bottomPage"]/span[1]/a[9]').click()
                     except:
                         self.final_cnt += 1
@@ -1420,11 +1470,14 @@ class MyWindow(QMainWindow, form_class):
         self.driver.close()
         time.sleep(0.5)
         len_option_total = len(self.option1_total)
+        offset = 0
+        if self.item_type == 1:
+            offset = 1
         for n in range(0, len_option_total):
             if self.option_translate == True and len(self.option1_total) != 0:
                 self.option1_total[n] = self.TranslateGoogle(self.option1_total[n], 'ko')
             
-            target_option = self.driver.window_handles[len_option_total - n]
+            target_option = self.driver.window_handles[len_option_total - n + offset]
             self.driver.switch_to.window(window_name=target_option)
 
             try:
@@ -1453,7 +1506,10 @@ class MyWindow(QMainWindow, form_class):
                                 price_temp = main_product.split('price J-p-')[1].split('{}">'.format(self.sku_temp[nn]))[1].split('<')[0]
                                 break
                             except:
-                                continue
+                                try:
+                                    price_temp = main_product.split('J-presale-price')[1].split('">')[1].split('<')[0]
+                                except:
+                                    continue
                 except:
                     try:
                         price_css = 'body > div:nth-child({}) > div > div.itemInfo-wrap > div.summary.summary-first > div > div.summary-price.J-summary-price > div.dd > span'.format(str(self.elem_idx - 1))
@@ -1655,6 +1711,11 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(self.process_delay)
 
     def ReLogin(self):
+        if self.item_type == 0:
+            end_tab_idx = 1
+        else:
+            end_tab_idx = 2
+
         if len(self.driver.window_handles) != 1:
             for n in range(len(self.driver.window_handles) - 1):
                 last_tab = self.driver.window_handles[-1]
@@ -1662,10 +1723,10 @@ class MyWindow(QMainWindow, form_class):
                 self.driver.close()
                 time.sleep(1)
 
-            first_tab = self.driver.window_handles[0]
+            first_tab = self.driver.window_handles[end_tab_idx - 1]
             self.driver.switch_to.window(window_name=first_tab)
         else:
-            first_tab = self.driver.window_handles[0]
+            first_tab = self.driver.window_handles[end_tab_idx - 1]
             self.driver.switch_to.window(window_name=first_tab)
         time.sleep(0.5)
         self.restart = True
