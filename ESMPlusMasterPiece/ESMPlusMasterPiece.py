@@ -203,7 +203,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartUpload(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22102305')
+        self.text.run('PGM ver : 22102308')
         self.start_time = self.text.GetTime()
         self.i = 0
         self.j = 0
@@ -229,6 +229,11 @@ class MyWindow(QMainWindow, form_class):
             if i > len(self.upload_list) - 1:
                 self.text.run('업로드 할 파일이 없습니다. 업로드를 종료합니다.')
                 self.text.run('마지막 ID : {}'.format(self.id_pw_df['ID'].iloc[i-1]))
+                self.end_time = self.text.GetTime()
+                diff_time = self.end_time - self.start_time
+                self.text.run('--End work--')
+                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                self.driver.close()
                 return 0
 
             # log-in
@@ -288,48 +293,67 @@ class MyWindow(QMainWindow, form_class):
             self.driver.find_element(By.CSS_SELECTOR, '#TDM416').click()
             time.sleep(3)
             
-            # 업로드파일선택 버튼 클릭
-            try:
-                file_select = pyautogui.locateCenterOnScreen('./driver/file_select.PNG', confidence=0.7)
-                win = gw.getWindowsWithTitle('Chrome')[0]
-                if win.isActive == False:
-                    pywinauto.application.Application().connect(handle=win._hWnd).top_window().set_focus()
-                win.activate() #윈도우 활성화
-                time.sleep(self.process_delay)
-                pyautogui.click(win.left + file_select.x, win.top + file_select.y) # 해당 윈도우의 path 클릭
-                time.sleep(self.process_delay)
-            except:
-                self.text.run('업로드파일선택 버튼 클릭에 실패했습니다.')
-                return 0
-            
-            # 폴더 경로 입력
-            try:
-                folder_path = pyautogui.locateCenterOnScreen('./driver/folder_path.PNG', confidence=0.7)
-                time.sleep(1)
-                pyautogui.click(win.left + folder_path.x, win.top + folder_path.y) # 해당 윈도우의 path 클릭
-                time.sleep(self.process_delay)
-                pyperclip.copy(new_folder)
-                pyautogui.hotkey('ctrl', 'v')
-                time.sleep(self.process_delay)
-                pyautogui.press('enter')
-                time.sleep(self.process_delay)
-            except:
-                self.text.run('폴더 경로 입력에 실패했습니다.')
-                return 0
+            cnt = 0
+            while True:
+                # 업로드파일선택 버튼 클릭
+                try:
+                    file_select = pyautogui.locateCenterOnScreen('./driver/file_select.PNG', confidence=0.7)
+                    win = gw.getWindowsWithTitle('Chrome')[0]
+                    if win.isActive == False:
+                        pywinauto.application.Application().connect(handle=win._hWnd).top_window().set_focus()
+                    win.activate() #윈도우 활성화
+                    time.sleep(self.process_delay)
+                    pyautogui.click(win.left + file_select.x, win.top + file_select.y) # 해당 윈도우의 path 클릭
+                    time.sleep(self.process_delay)
+                except:
+                    self.text.run('업로드파일선택 버튼 클릭에 실패했습니다.')
+                    return 0
+                
+                # 폴더 경로 입력
+                try:
+                    folder_path = pyautogui.locateCenterOnScreen('./driver/folder_path.PNG', confidence=0.7)
+                    time.sleep(1)
+                    pyautogui.click(win.left + folder_path.x, win.top + folder_path.y) # 해당 윈도우의 path 클릭
+                    time.sleep(self.process_delay)
+                    pyperclip.copy(new_folder)
+                    pyautogui.hotkey('ctrl', 'v')
+                    time.sleep(self.process_delay)
+                    pyautogui.press('enter')
+                    time.sleep(self.process_delay)
+                except:
+                    self.text.run('폴더 경로 입력에 실패했습니다.')
+                    return 0
 
-            # 파일 이름 입력
-            try:
-                file_path = pyautogui.locateCenterOnScreen('./driver/file_path.PNG', confidence=0.7)
-                time.sleep(1)
-                pyautogui.click(win.left + file_path.x, win.top + file_path.y) # 해당 윈도우의 path 클릭
-                time.sleep(self.process_delay)
-                pyperclip.copy(self.upload_list[i])
-                pyautogui.hotkey('ctrl', 'v')
-                time.sleep(self.process_delay)
-                pyautogui.press('enter')
-            except:
-                self.text.run('파일명 입력에 실패했습니다.')
-                return 0
+                # 파일 이름 입력
+                try:
+                    if cnt == 20:
+                        self.text.run('파일명 입력에 실패했습니다.')
+                        return 0
+                    file_path = pyautogui.locateCenterOnScreen('./driver/file_path.PNG', confidence=0.7)
+                    time.sleep(1)
+                    pyautogui.click(win.left + file_path.x, win.top + file_path.y) # 해당 윈도우의 path 클릭
+                    time.sleep(self.process_delay)
+                    pyperclip.copy(self.upload_list[i])
+                    pyautogui.hotkey('ctrl', 'v')
+                    time.sleep(self.process_delay)
+                    pyautogui.press('enter')
+                    time.sleep(3)
+                    try:
+                        file_path = pyautogui.locateCenterOnScreen('./driver/file_path.PNG', confidence=0.7)
+                        if file_path == None:
+                            break
+                        else:
+                            cnt += 1
+                            pyautogui.press('esc')
+                            time.sleep(self.process_delay)
+                            pyautogui.press('esc')
+                            time.sleep(self.process_delay)
+                            continue
+                    except:
+                        break
+                except:
+                    self.text.run('파일명 입력에 실패했습니다.')
+                    return 0
 
             # 업로드 요청 버튼 클릭
             try:
