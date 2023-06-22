@@ -24,6 +24,52 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_6">
+    <item row="3" column="0">
+     <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="run_btn">
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>데이터 수집</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="exit_btn">
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>종료</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QTextBrowser" name="textBrowser">
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
@@ -40,46 +86,6 @@
          <string>상품명 검색</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_2">
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="page_cnt">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-             <pointsize>11</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="echoMode">
-            <enum>QLineEdit::Normal</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QCheckBox" name="no_option">
-           <property name="text">
-            <string>단일상품 수집</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_8">
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-             <pointsize>11</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;상품명&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="1">
           <widget class="QLineEdit" name="item_name">
            <property name="enabled">
@@ -92,6 +98,13 @@
              <weight>75</weight>
              <bold>true</bold>
             </font>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QCheckBox" name="no_option">
+           <property name="text">
+            <string>단일상품 수집</string>
            </property>
           </widget>
          </item>
@@ -110,10 +123,107 @@
            </property>
           </widget>
          </item>
+         <item row="5" column="1">
+          <widget class="QLabel" name="label_2">
+           <property name="font">
+            <font>
+             <family>맑은 고딕</family>
+             <pointsize>10</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>단위 : % ex) 50 -&gt; 50% 할인율 내의 상품 소싱</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="2">
+          <widget class="QCheckBox" name="enable_translate_itemname">
+           <property name="text">
+            <string>번역된 상품명으로 검색</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="page_cnt">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="font">
+            <font>
+             <family>맑은 고딕</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="echoMode">
+            <enum>QLineEdit::Normal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="discount_per_limit"/>
+         </item>
+         <item row="6" column="2">
+          <widget class="QCheckBox" name="enable_option2_btn">
+           <property name="text">
+            <string>옵션2 상품 소싱 활성화</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="2">
+          <widget class="QCheckBox" name="enable_discount">
+           <property name="text">
+            <string>할인 가격으로 수집</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;할인율 상한&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
          <item row="1" column="2">
           <widget class="QCheckBox" name="auto_translate_btn">
            <property name="text">
             <string>옵션명 번역</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="font">
+            <font>
+             <family>맑은 고딕</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;상품명&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <family>맑은 고딕</family>
+             <pointsize>9</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>미입력 시 100%로 설정되어 모든 할인가 상품 소싱</string>
            </property>
           </widget>
          </item>
@@ -198,7 +308,7 @@
        <string>웹 오픈</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_5">
-       <item row="0" column="0">
+       <item row="2" column="0">
         <widget class="QPushButton" name="url_btn">
          <property name="font">
           <font>
@@ -213,7 +323,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
+       <item row="2" column="3">
         <widget class="QPushButton" name="search_btn">
          <property name="font">
           <font>
@@ -228,54 +338,35 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="3">
+        <widget class="QCheckBox" name="enable_crawl_price_only_btn">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>할인 전후 가격만 수집</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="enable_link_sourcing">
+         <property name="text">
+          <string>링크 소싱</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="enable_continuous_btn">
+         <property name="text">
+          <string>연속데이터 수집</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
-    </item>
-    <item row="3" column="0">
-     <layout class="QGridLayout" name="gridLayout_4">
-      <item row="0" column="0">
-       <widget class="QPushButton" name="run_btn">
-        <property name="font">
-         <font>
-          <family>맑은 고딕</family>
-          <pointsize>11</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>데이터 수집</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="exit_btn">
-        <property name="font">
-         <font>
-          <family>맑은 고딕</family>
-          <pointsize>11</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>종료</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0" colspan="2">
-       <widget class="QTextBrowser" name="textBrowser">
-        <property name="font">
-         <font>
-          <family>맑은 고딕</family>
-          <pointsize>11</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </item>
    </layout>
   </widget>
@@ -294,9 +385,21 @@
  <tabstops>
   <tabstop>item_name</tabstop>
   <tabstop>page_cnt</tabstop>
-  <tabstop>textBrowser</tabstop>
+  <tabstop>discount_per_limit</tabstop>
   <tabstop>no_option</tabstop>
   <tabstop>auto_translate_btn</tabstop>
+  <tabstop>enable_translate_itemname</tabstop>
+  <tabstop>enable_discount</tabstop>
+  <tabstop>item_name_radio</tabstop>
+  <tabstop>category_radio</tabstop>
+  <tabstop>super_deal_radio</tabstop>
+  <tabstop>coupon_radio</tabstop>
+  <tabstop>free_radio</tabstop>
+  <tabstop>quick_delivery_radio</tabstop>
+  <tabstop>url_btn</tabstop>
+  <tabstop>run_btn</tabstop>
+  <tabstop>exit_btn</tabstop>
+  <tabstop>textBrowser</tabstop>
  </tabstops>
  <resources/>
  <connections/>
