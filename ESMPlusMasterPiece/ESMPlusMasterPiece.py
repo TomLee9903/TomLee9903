@@ -17,6 +17,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import chromedriver_autoinstaller
 import sys
 import time
@@ -109,8 +111,11 @@ class MyWindow(QMainWindow, form_class):
             self.data_cnt = int(self.data_cnt_input.text())
         except:
             self.data_cnt = 100
-
-        df = pd.read_excel(self.filename, index_col=False, header=None)
+        try:
+            df = pd.read_excel(self.filename, index_col=False, header=None)
+        except:
+            return
+        
         file_name = self.filename.split('/')[-1].split('.')[0]
         folder_path = '/'.join(self.filename.split('.')[0].split('/')[0:-1]) + '/{}_divided'.format(file_name)
         cnt = 7
@@ -171,16 +176,17 @@ class MyWindow(QMainWindow, form_class):
     # 파파고 URL 오픈
     @pyqtSlot()
     def OpenUrl(self):
-        self.options = Options()
+        self.options = webdriver.ChromeOptions()
 
         #self.options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
         # 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션       
-        chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
-        try:
-            self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
-        except:
-            chromedriver_autoinstaller.install(True)
-            self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+        self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
+        # chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
+        # try:
+        #     self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
+        # except:
+        #     chromedriver_autoinstaller.install(True)
+        #     self.driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=self.options)
         self.driver.implicitly_wait(10)
         
         # 속도 향상을 위한 옵션 해제
@@ -236,10 +242,16 @@ class MyWindow(QMainWindow, form_class):
                 self.driver.close()
                 return 0
 
+            if i != 0:
+                try:
+                    self.driver.find_element(By.CSS_SELECTOR, '#container > div > div > div.box__layer.is-active > div > div.button__wrap > button').click()
+                except:
+                    pass
+
             # log-in
-            self.id_box = self.driver.find_element(By.CSS_SELECTOR, "#Id")
-            self.pw_box = self.driver.find_element(By.CSS_SELECTOR, "#Password")
-            self.login_button = self.driver.find_element(By.CSS_SELECTOR, '#btnLogOn')
+            self.id_box = self.driver.find_element(By.CSS_SELECTOR, "#typeMemberInputId01")
+            self.pw_box = self.driver.find_element(By.CSS_SELECTOR, "#typeMemberInputPassword01")
+            self.login_button = self.driver.find_element(By.CSS_SELECTOR, '#container > div > div > div.box__content > form > div.box__submit > button')
             ac.send_keys_to_element(self.id_box, self.id_pw_df['ID'].iloc[i]).send_keys_to_element(self.pw_box, self.id_pw_df['PW'].iloc[i]).click(self.login_button).pause(2).perform()
             time.sleep(5)
             
