@@ -49,6 +49,13 @@ import cv2
 import pyautogui as pag
 import random
 import copy
+from enum import Enum
+
+class Result(Enum):
+    FAIL = 0
+    PASS = 1
+    UNKNOWN = 2
+    RETRY = 3
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -152,13 +159,13 @@ class MyWindow(QMainWindow, form_class):
         elif self.accuracy_btn.isChecked():
             self.arrange = 1
 
-
     def SetSilentMode(self):
         silent = self.silent_mode_btn.isChecked()
         if silent == True:
             self.silent_mode = True
         elif silent == False:
             self.silent_mode = False
+
     # 종료 버튼 누르면 실행되는 함수
     def QuitProgram(self):
         QCoreApplication.instance().quit
@@ -253,7 +260,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 23101406')
+        self.text.run('PGM ver : 23112607')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -275,7 +282,7 @@ class MyWindow(QMainWindow, form_class):
                 self.dc_per = float(self.discount_per_limit.text())
             except:
                 self.text.run('할인율을 정확히 입력해주세요. 소싱이 종료됩니다.')
-                return 1
+                return Result.PASS
         else:
             self.dc_per = 100.0
 
@@ -307,10 +314,10 @@ class MyWindow(QMainWindow, form_class):
             else:
                 search_item = ''
             ret = self.CrawlDataWithItemName(search_item)
-            if ret == 0:
+            if ret == Result.FAIL:
                 while True:
                     ret = self.Retry(search_item)
-                    if ret == 1:
+                    if ret == Result.PASS:
                         break
         
         self.detail_db = []
@@ -382,14 +389,14 @@ class MyWindow(QMainWindow, form_class):
         
         if self.link_parse == True:
             self.detail_db = self.GetDb()
-            max_cnt = len(self.detail_db['타오바오검색선택링크주소'])
+            max_cnt = len(self.detail_db.iloc[:, 13])
             idx = 0
-            for url in self.detail_db['타오바오검색선택링크주소']:
+            for url in self.detail_db.iloc[:, 13]:
                 self.driver.get(url)
-                self.search_url = self.detail_db['타오바오검색결과주소'][idx]
+                self.search_url = url
                 self.CrawlDataFromFile(max_cnt, idx + 1)
                 idx += 1
-            return 1
+            return Result.PASS
 
         if self.restart == False:
             WebDriverWait(self.driver, 50).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#root')))
@@ -424,12 +431,12 @@ class MyWindow(QMainWindow, form_class):
                 pass
 
         ret = self.InitializeSettingOnPage()
-        if ret == 0:
+        if ret == Result.FAIL:
             ret = self.InitializeSettingOnPage()
 
         while True:
             ret = self.CrawlData()
-            if ret == 1:
+            if ret == Result.PASS:
                 break
         
         self.final_cnt = 0
@@ -441,7 +448,7 @@ class MyWindow(QMainWindow, form_class):
         self.sheet = self.wb.active
         self.sheet.append(self.columns)
         
-        return 1
+        return Result.PASS
 
     def CrawlDetailSourcing(self, url):
         if self.restart == False:
@@ -462,20 +469,20 @@ class MyWindow(QMainWindow, form_class):
         self.item_text = parse.unquote(link_name)
         self.SearchItem()
         ret = self.InitializeSettingOnPage()
-        if ret != 1:
+        if ret != Result.PASS:
             for i in range(2):
                 self.driver.refresh()
                 time.sleep(5)
                 ret = self.InitializeSettingOnPage()
-                if ret == 1:
+                if ret == Result.PASS:
                     break
-            if ret != 0:
+            if ret != Result.FAIL:
                 self.text.run('페이지 세팅 초기화에 실패했습니다. 프로그램 종료 후 재시도 바랍니다.')
-                return 0
+                return Result.FAIL
             
         while True:
             ret = self.CrawlData()
-            if ret == 1:
+            if ret == Result.PASS:
                 break
 
         self.final_cnt = 0
@@ -487,7 +494,7 @@ class MyWindow(QMainWindow, form_class):
         self.sheet = self.wb.active
         self.sheet.append(self.columns)
 
-        return 1
+        return Result.PASS
 
     def InitializeSettingOnPage(self):
         self.close_page_num = 1
@@ -501,7 +508,7 @@ class MyWindow(QMainWindow, form_class):
                 except:
                     self.text.run('바둑판 배열 클릭에 실패했습니다.')
                     self.CloseItemPage()
-                    return 0
+                    return Result.FAIL
 
                 # 메인화면인지 확인
                 try:
@@ -509,7 +516,7 @@ class MyWindow(QMainWindow, form_class):
                 except:
                     self.text.run('바둑판 배열 클릭에 실패했습니다.')
                     self.CloseItemPage()
-                    return 0
+                    return Result.FAIL
 
         if self.extra == 6:
             last_tab = self.driver.window_handles[-1]
@@ -518,14 +525,28 @@ class MyWindow(QMainWindow, form_class):
             self.close_page_num = 2
 
         # 페이지 스크롤 최대치로 내리기
-        ret = self.ScrollPageDown(True)
-        ret = self.SlideNetworkCheck()
-        if ret == 0:
-            self.text.run('웹페이지 로딩에 실패했습니다.')
+        cnt = 0
+        while cnt < 10:
+            ret = self.ScrollPageDown(True)
+            ret = self.SlideNetworkCheck()
+            if ret == Result.FAIL:
+                self.text.run('슬라이드바 체크에 실패했습니다.')
+                self.CloseItemPage()
+                self.cnt += 1
+                return Result.FAIL
+            elif ret == Result.RETRY:
+                self.driver.refresh()
+                time.sleep(3)
+                cnt += 1
+            else:
+                break
+        
+        if cnt == 10:
+            self.text.run('슬라이드바 체크에 실패했습니다.')
             self.CloseItemPage()
             self.cnt += 1
-            return 0
-        
+            return Result.FAIL
+
         self.num_temp = 0
         self.sub_idx = 0
         self.id_list = []
@@ -553,7 +574,7 @@ class MyWindow(QMainWindow, form_class):
                 self.item_text = '슈퍼딜'
             except:
                 self.text.run('슈퍼딜 상품이 매진되었습니다.')
-                return 1
+                return Result.PASS
         elif self.extra == 3:
             # 신규 쿠폰
             text = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div > div:nth-child(2)').get_attribute('innerHTML').split('cursor: pointer;">')
@@ -577,7 +598,7 @@ class MyWindow(QMainWindow, form_class):
                 self.item_text = '꽁돈대첩'
             except:
                 self.text.run('지원하지 않는 페이지입니다.')
-                return 1
+                return Result.PASS
         elif self.extra == 5:
             # 신규 쿠폰
             try:
@@ -590,7 +611,7 @@ class MyWindow(QMainWindow, form_class):
                 self.item_text = '깜짝배송'
             except:
                 self.text.run('지원하지 않는 페이지입니다.')
-                return 1
+                return Result.PASS
         
         elif self.extra == 6:
             # 추천 수집
@@ -600,9 +621,9 @@ class MyWindow(QMainWindow, form_class):
                 self.item_text = '추천상품'
             except:
                 self.text.run('지원하지 않는 페이지입니다.')
-                return 1
+                return Result.PASS
             
-        return 1
+        return Result.PASS
 
     def CrawlData(self):
         if self.cnt == 5:
@@ -617,7 +638,7 @@ class MyWindow(QMainWindow, form_class):
             self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
             self.restart = True
 
-            return 1
+            return Result.PASS
         
         self.no_crawl = False
         self.other_page = False
@@ -750,7 +771,7 @@ class MyWindow(QMainWindow, form_class):
                             self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                             self.restart = True
 
-                            return 1
+                            return Result.PASS
 
                         try:
                             previous_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--left--3ZLy8Mu > ul > li.pagination--paginationLink--2ucXUo6.pagination--isActive--58C6XTV')))[0].text)
@@ -778,7 +799,7 @@ class MyWindow(QMainWindow, form_class):
                                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                                 self.restart = True
 
-                                return 1
+                                return Result.PASS
 
                             time.sleep(self.process_delay)
                             current_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--left--3ZLy8Mu > ul > li.pagination--paginationLink--2ucXUo6.pagination--isActive--58C6XTV')))[0].text)
@@ -795,7 +816,7 @@ class MyWindow(QMainWindow, form_class):
                                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                                 self.restart = True
 
-                                return 1
+                                return Result.PASS
                             else:
                                 self.j = 0
                                 self.i += 1
@@ -808,11 +829,11 @@ class MyWindow(QMainWindow, form_class):
                             WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--right--gUH5L-E > input')))[0].clear()
                             time.sleep(1)
                             ret = self.ScrollPageDown()
-                            if ret == 0:
+                            if ret == Result.FAIL:
                                 self.text.run('웹페이지 로딩에 실패했습니다.')
                                 self.CloseItemPage()
                                 self.cnt += 1
-                                return 0
+                                return Result.FAIL
                             page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--right--gUH5L-E > input')))[0]
                             page_num = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--left--3ZLy8Mu > ul > li.pagination--paginationLink--2ucXUo6.pagination--isActive--58C6XTV')))[0].text
                             goto_page = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--right--gUH5L-E > span.pagination--jumpBtn--3e69BYK')))[0]
@@ -824,13 +845,28 @@ class MyWindow(QMainWindow, form_class):
                             self.cnt += 1
 
                         # 페이지 스크롤 최대치로 내리기
-                        ret = self.ScrollPageDown()
-                        ret = self.SlideNetworkCheck()
-                        if ret == 0:
-                            self.text.run('웹페이지 로딩에 실패했습니다.')
+                        cnt = 0
+                        while cnt < 10:
+                            ret = self.ScrollPageDown(True)
+                            ret = self.SlideNetworkCheck()
+                            if ret == Result.FAIL:
+                                self.text.run('슬라이드바 체크에 실패했습니다.')
+                                self.CloseItemPage()
+                                self.cnt += 1
+                                return Result.FAIL
+                            elif ret == Result.RETRY:
+                                self.driver.refresh()
+                                time.sleep(3)
+                                cnt += 1
+                            else:
+                                break
+                        
+                        if cnt == 10:
+                            self.text.run('슬라이드바 체크에 실패했습니다.')
                             self.CloseItemPage()
                             self.cnt += 1
-                            return 0
+                            return Result.FAIL
+                        
                         try:
                             if self.num_temp == 0:
                                 if self.sub_idx == 0:
@@ -872,7 +908,7 @@ class MyWindow(QMainWindow, form_class):
                     self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                     self.restart = True
 
-                    return 1
+                    return Result.PASS
             else:
                 self.text.run('{}번째가 마지막 상품입니다.'.format(self.final_cnt))
                 self.text.run('크롤링이 완료되었습니다.')
@@ -885,7 +921,7 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                 self.restart = True
 
-                return 1
+                return Result.PASS
         
         # 알리익스프레스 검색 선택링크주소
         select_url = ''
@@ -905,7 +941,7 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 아이템의 링크를 가져오는데 실패했습니다.'.format(self.i + 1, self.j + 1))
                 self.cnt += 1
                 self.CloseItemPage()
-                return 0
+                return Result.FAIL
             else:
                 while_cnt += 1
 
@@ -938,7 +974,7 @@ class MyWindow(QMainWindow, form_class):
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
 
-                        return 0
+                        return Result.FAIL
                 except:
                     try:
                         #self.product_main = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.mainWrap--mainWrap--3boV-yO')))[0].get_attribute('innerHTML')
@@ -955,16 +991,17 @@ class MyWindow(QMainWindow, form_class):
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
                         
-                        return 0
+                        return Result.FAIL
                     except:
                         self.text.run('이미지 클릭에 실패했습니다.')
                         self.cnt += 1
                         self.CloseItemPage()
-                        return 0
+                        return Result.FAIL
             else:
                 self.driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
                 time.sleep(1)
-                return 1
+                return Result.PASS
+            
         # check if its not sale
         try:
             is_sale = self.product_main.split('message--wrap--TCbfZuF')[1].split('</div')[0].replace('>', '').replace('"','')
@@ -981,7 +1018,27 @@ class MyWindow(QMainWindow, form_class):
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
                 
-                return 0
+                return Result.FAIL
+        except:
+            pass
+        
+        # Check if it could not delivery to Korea
+        try:
+            is_delivery = self.product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
+            if is_delivery != -1:
+                self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.CloseItemPage()
+                if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                    self.ClickNextPage()
+
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+                else:
+                    self.j += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                
+                return Result.FAIL
         except:
             pass
 
@@ -1010,16 +1067,32 @@ class MyWindow(QMainWindow, form_class):
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
 
-                return 0
+                return Result.FAIL
+            
         time.sleep(1)
+        
         # 페이지 스크롤 최대치로 내리기
-        ret = self.ScrollPageDown()
-        ret = self.SlideNetworkCheck()
-        if ret == 0:
-            self.text.run('웹페이지 로딩에 실패했습니다.')
+        cnt = 0
+        while cnt < 10:
+            ret = self.ScrollPageDown(True)
+            ret = self.SlideNetworkCheck()
+            if ret == Result.FAIL:
+                self.text.run('슬라이드바 체크에 실패했습니다.')
+                self.CloseItemPage()
+                self.cnt += 1
+                return Result.FAIL
+            elif ret == Result.RETRY:
+                self.driver.refresh()
+                time.sleep(3)
+                cnt += 1
+            else:
+                break
+        
+        if cnt == 10:
+            self.text.run('슬라이드바 체크에 실패했습니다.')
             self.CloseItemPage()
             self.cnt += 1
-            return 0
+            return Result.FAIL
         
         if self.new_format == True:
             self.driver.execute_script("window.scrollTo(0, 0)")
@@ -1033,7 +1106,7 @@ class MyWindow(QMainWindow, form_class):
 
         # 선택제품가격
         ret, self.price, self.price_ori = self.GetPrice()
-        if ret != 1:
+        if ret != Result.PASS:
             if self.no_crawl == True:
                 try:
                     verify_age = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.pages--title--1LAhwQy')))[0].text
@@ -1050,7 +1123,7 @@ class MyWindow(QMainWindow, form_class):
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
 
-                        return 0
+                        return Result.FAIL
                 except:
                     self.text.run('{}페이지 {}번째 아이템의 가격 수집에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
             else:
@@ -1066,8 +1139,10 @@ class MyWindow(QMainWindow, form_class):
                 self.j += 1
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
 
-            return 0
+            return Result.FAIL
         
+        self.windows_user_name = os.path.expanduser('~')
+
         # 리뷰 수
         self.review = self.GetReview()
 
@@ -1079,8 +1154,39 @@ class MyWindow(QMainWindow, form_class):
 
         # 대표이미지
         self.img_url = self.GetRepresentImage(self.other_page)
- 
-        self.windows_user_name = os.path.expanduser('~')
+
+        # 동영상 링크
+        self.video_link = self.GetVideoLink()
+
+        # 배송비/배송방법
+        ret, self.delivery_for, self.delivery_fee = self.GetDeliveryInfo()
+        if ret == Result.FAIL:
+            self.text.run('{}페이지 {}번째 아이템의 배송정보 획득에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+            self.CloseItemPage()
+            if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                self.ClickNextPage()
+                self.j = 0
+                self.i += 1
+                time.sleep(self.process_delay)
+            else:
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+
+            return Result.FAIL
+
+        # 판매자상품코드
+        self.sku = self.GetSkuId()
+        if self.no_crawl == True:
+            self.CloseItemPage()
+            if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                self.ClickNextPage()
+                self.j = 0
+                self.i += 1
+                time.sleep(self.process_delay)
+            else:
+                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                self.j += 1
+            return Result.FAIL
 
         # 상세 페이지
         self.detail_imgs = self.GetDetailImages()
@@ -1106,7 +1212,7 @@ class MyWindow(QMainWindow, form_class):
             else:
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
                 self.j += 1
-            return 0
+            return Result.FAIL
 
         option1_list = '\n'.join(option1_list)
         option1_total = '\n'.join(option1_total)
@@ -1120,8 +1226,8 @@ class MyWindow(QMainWindow, form_class):
             price_final = '{}-{}'.format(min(prices), max(prices))
         else:
             price_final = self.price
-        self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','','','','',self.search_url, select_url, price_final, self.title, 
-                            self.img_url, option1_list, option2_list, option1_total, self.detail_imgs])
+        self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url, 
+                           select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
         self.SaveFile()
         self.CloseItemPage()
 
@@ -1139,7 +1245,7 @@ class MyWindow(QMainWindow, form_class):
             self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
             self.restart = True
 
-            return 1
+            return Result.PASS
         else:
             if (self.extra == 0 or self.extra == 1):
                 self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
@@ -1151,7 +1257,7 @@ class MyWindow(QMainWindow, form_class):
                 self.idx += 1
                 time.sleep(self.process_delay)
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                return 0 
+                return Result.FAIL 
 
         self.final_cnt += 1
         self.idx += 1
@@ -1159,7 +1265,7 @@ class MyWindow(QMainWindow, form_class):
         self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
 
     def GetPrice(self):
-        ret = 1
+        ret = Result.PASS
         price = ''
         price_ori = ''
 
@@ -1229,7 +1335,7 @@ class MyWindow(QMainWindow, form_class):
                             pass
                     except:
                         self.no_crawl = True
-                        ret = 0
+                        return Result.FAIL
 
         if self.no_crawl == False:
             if '-' in price:
@@ -1249,7 +1355,7 @@ class MyWindow(QMainWindow, form_class):
                         price = float(price_temp)
                     except:
                         self.no_crawl = True
-                        ret = 0
+                        return Result.FAIL
 
                         return ret, price, price_ori
         else:
@@ -1274,7 +1380,7 @@ class MyWindow(QMainWindow, form_class):
         if discount_per > int(self.dc_per):
             discounted_price = ''
             original_price = ''
-            ret = 0
+            return Result.FAIL
 
         return ret, discounted_price, original_price
     
@@ -1307,6 +1413,31 @@ class MyWindow(QMainWindow, form_class):
                 img_url = img_url.split('_.webp')[0].replace('"','').split('.jpeg')[0].replace('.jpeg', '') + '.jpeg'
             
         return img_url
+    
+    def GetVideoLink(self):
+        try:
+            video_temp = self.product_main.split('https://video')[1].split('.mp4')[0]
+            if video_temp != '':
+                video_link = 'https://video' + video_temp + '.mp4'
+        except:
+                video_link = ''
+
+        return video_link
+
+    def GetDeliveryInfo(self):
+        ret = Result.PASS
+        try:
+            delivery_temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div').text
+            if '무료 배송' not in delivery_temp:
+                delivery_for = '유료 배송'
+                delivery_fee = float(delivery_temp.split('$')[1].split('\n')[0].split(' ')[0].replace(' ', ''))
+            else:
+                delivery_for = '무료 배송'
+                delivery_fee = 0
+        except:
+            return Result.FAIL, '', ''
+
+        return ret, delivery_for, delivery_fee
 
     def GetReview(self):
         review = ''
@@ -1347,7 +1478,19 @@ class MyWindow(QMainWindow, form_class):
                     sold_cnt = int(sold_cnt.split('만')[0]) * 10000
 
         return sold_cnt
-    
+
+    def GetSkuId(self):
+        sku = self.driver.current_url.split('.html')[0].split('/')[-1]
+        if sku in self.sku_id:
+            self.text.run('{}페이지 {}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+            self.no_crawl = True
+
+            return sku
+        else:
+            self.sku_id.append(sku)
+        
+        return sku
+
     def GetOption1(self):
         option1_total = []
         option1_list = []
@@ -1375,7 +1518,6 @@ class MyWindow(QMainWindow, form_class):
             option1_list = []
             option2_list = []
             prices = []
-           
 
             return option1_total, option1_list, option2_list, prices
 
@@ -1816,21 +1958,6 @@ class MyWindow(QMainWindow, form_class):
 
             return option1_total, option1_list, option2_list, prices
 
-        sku = self.driver.current_url.split('.html')[0].split('/')[-1]
-
-        if sku in self.sku_id:
-            self.text.run('{}페이지 {}번째 아이템은 이미 수집된 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
-
-            self.no_crawl = True
-            option1_total = []
-            option1_list = []
-            option2_list = []
-            prices = []
-
-            return option1_total, option1_list, option2_list, prices
-        else:
-            self.sku_id.append(sku)
-
         if len(options[0]) > 30:
             self.text.run('{}페이지 {}번째 아이템의 옵션 갯수를 30개로 한정합니다.'.format(self.i + 1, self.j + 1))
             option1_total = []
@@ -2149,7 +2276,7 @@ class MyWindow(QMainWindow, form_class):
         return text_rmv
 
     def SaveFile(self, postfix = ''):
-        ret = 1
+        ret = Result.PASS
         file_folder = '{}\\Desktop\\알리익스프레스_결과물'.format(self.windows_user_name)
         filename = '{}\\{}'.format(file_folder, self.item_text + '_AliExpress_ItemName_results{}.xlsx'.format(postfix))
         try:
@@ -2157,11 +2284,11 @@ class MyWindow(QMainWindow, form_class):
                 os.mkdir(file_folder)
         except OSError:
             self.text.run('파일 폴더를 생성하는데 실패했습니다.')
-            return 0
+            return Result.FAIL
 
         self.wb.save(filename)
         #self.tb_temp.to_excel(filename, index=False)
-        return 1
+        return ret
 
     def TranslateGoogle(self, text, option):
         try:
@@ -2216,6 +2343,8 @@ class MyWindow(QMainWindow, form_class):
 
     def CrawlDataFromFile(self, max_cnt, item_cnt):
         self.no_crawl = False
+        self.other_page = False
+
         # 알리익스프레스 검색 선택링크주소
         last_tab = self.driver.window_handles[-1]
         self.driver.switch_to.window(window_name=last_tab)
@@ -2253,7 +2382,7 @@ class MyWindow(QMainWindow, form_class):
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
 
-                        return 0
+                        return Result.FAIL
                 except:
                     try:
                         self.product_main = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div > div.mainWrap--mainWrap--3boV-yO')))[0].get_attribute('innerHTML')
@@ -2262,11 +2391,11 @@ class MyWindow(QMainWindow, form_class):
                         self.text.run('이미지 클릭에 실패했습니다.')
                         self.cnt += 1
                         self.CloseItemPage()
-                        return 0
+                        return Result.FAIL
             else:
                 self.driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
                 time.sleep(1)
-                return 1
+                return Result.PASS
 
         # check if its not sale
         try:
@@ -2283,7 +2412,27 @@ class MyWindow(QMainWindow, form_class):
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
                 
-                return 0
+                return Result.FAIL
+        except:
+            pass
+        
+        # Check if it could not delivery to Korea
+        try:
+            is_delivery = self.product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
+            if is_delivery != -1:
+                self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.CloseItemPage()
+                if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                    self.ClickNextPage()
+
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+                else:
+                    self.j += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                
+                return Result.FAIL
         except:
             pass
 
@@ -2316,9 +2465,10 @@ class MyWindow(QMainWindow, form_class):
                     self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                     self.restart = True
 
-                    return 1
+                    return Result.PASS
                 else:
-                    return 0
+                    return Result.FAIL
+
         time.sleep(1)
         if self.enable_crawl_price_only == False:
             ret = self.ScrollPageDown()
@@ -2326,20 +2476,24 @@ class MyWindow(QMainWindow, form_class):
             if self.new_format == True:
                 self.driver.execute_script("window.scrollTo(0, 0)")
                 time.sleep(0.5)
-                WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#nav-description > div:nth-child(2) > button')))[0].click()
+                try:
+                    WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#nav-description > div:nth-child(2) > button')))[0].click()
+                except:
+                    time.sleep(1)
+                    WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#nav-description > div:nth-child(2) > button')))[0].click()
                 time.sleep(0.5)
                 ret = self.ScrollPageDown()
-            if ret == 0:
+            if ret == Result.FAIL:
                 self.text.run('웹페이지 로딩에 실패했습니다.')
                 self.CloseItemPage()
                 self.cnt += 1
-                return 0
+                return Result.FAIL
         else:
             ret = self.SlideNetworkCheck()
 
         # 선택제품가격
         ret, self.price, self.price_ori = self.GetPrice()
-        if ret != 1:
+        if ret != Result.PASS:
             if self.no_crawl == True:
                 if ret == -1:
                     self.text.run('{}번째 아이템의 페이지를 찾을 수 없습니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
@@ -2361,19 +2515,21 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                 self.restart = True
 
-                return 1
+                return Result.PASS
             else:
-                return 0
+                return Result.FAIL
 
         if self.enable_crawl_price_only == True:
-            self.sheet.append([self.item_text, self.price_ori, self.price, '','','','','','','','','', self.search_url, select_url, 
-                               self.detail_db['선택제품가격'][item_cnt - 1],
-                               self.detail_db['상품제목'][item_cnt - 1],
-                               self.detail_db['대표이미지'][item_cnt - 1],
-                               self.detail_db['옵션1'][item_cnt - 1],
-                               self.detail_db['옵션2'][item_cnt - 1],
-                               self.detail_db['옵션_종합'][item_cnt - 1],
-                               self.detail_db['상세페이지'][item_cnt - 1]])
+            self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','', self.video_link, self.delivery_for, self.delivery_fee, 
+                               self.search_url, select_url,
+                               self.detail_db.iloc[14, item_cnt - 1],
+                               self.detail_db.iloc[15, item_cnt - 1],
+                               self.detail_db.iloc[16, item_cnt - 1],
+                               self.detail_db.iloc[17, item_cnt - 1],
+                               self.detail_db.iloc[18, item_cnt - 1],
+                               self.detail_db.iloc[19, item_cnt - 1],
+                               self.detail_db.iloc[20, item_cnt - 1]],
+                               self.detail_db.iloc[21, item_cnt - 1])
             self.SaveFile('_reproduction')
 
             self.final_cnt += 1
@@ -2388,10 +2544,12 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                 self.restart = True
 
-                return 1
+                return Result.PASS
             
-            return 1
+            return Result.PASS
         else:
+            self.windows_user_name = os.path.expanduser('~')
+
             # 리뷰 수
             self.review = self.GetReview()
 
@@ -2402,9 +2560,40 @@ class MyWindow(QMainWindow, form_class):
             self.title = self.GetTitle()
 
             # 대표이미지
-            self.img_url = self.GetRepresentImage()
+            self.img_url = self.GetRepresentImage(self.other_page)
 
-            self.windows_user_name = os.path.expanduser('~')
+            # 동영상 링크
+            self.video_link = self.GetVideoLink()
+
+            # 배송비/배송방법
+            ret, self.delivery_for, self.delivery_fee = self.GetDeliveryInfo()
+            if ret == Result.FAIL:
+                self.text.run('{}페이지 {}번째 아이템의 배송정보 획득에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.CloseItemPage()
+                if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+                else:
+                    self.j += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+
+                return Result.FAIL
+
+            # 판매자상품코드
+            self.sku = self.GetSkuId()
+            if self.no_crawl == True:
+                self.CloseItemPage()
+                if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+                else:
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    self.j += 1
+                return Result.FAIL
 
             # 상세 페이지
             self.detail_imgs = self.GetDetailImages()
@@ -2434,9 +2623,9 @@ class MyWindow(QMainWindow, form_class):
                     self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                     self.restart = True
 
-                    return 1
+                    return Result.PASS
                 else:
-                    return 0
+                    return Result.FAIL
 
             option1_list = '\n'.join(option1_list)
             option1_total = '\n'.join(option1_total)
@@ -2450,8 +2639,8 @@ class MyWindow(QMainWindow, form_class):
                 price_final = '{}-{}'.format(min(prices), max(prices))
             else:
                 price_final = self.price
-            self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','','','','',self.search_url, select_url, price_final, self.title, 
-                                self.img_url, option1_list, option2_list, option1_total, self.detail_imgs])
+            self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url, 
+                    select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
             self.SaveFile('_reproduction')
             self.CloseItemPage()
 
@@ -2467,7 +2656,7 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                 self.restart = True
 
-                return 1
+                return Result.PASS
             else:
                 self.text.run('{}번째 아이템 크롤링 중'.format(item_cnt))
 
@@ -2494,9 +2683,9 @@ class MyWindow(QMainWindow, form_class):
                     else:
                         before_h = after_h
         except:
-            return 0
+            return Result.FAIL
         
-        return 1
+        return Result.PASS
     
     def CloseItemPage(self):
         if len(self.driver.window_handles) != 1:
@@ -2544,19 +2733,19 @@ class MyWindow(QMainWindow, form_class):
                     self.text.run('--End work--')
                     self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
                     self.restart = True
-                    return 1
+                    return Result.PASS
 
     def SlideNetworkCheck(self):
         path = os.getcwd()
         img_ori = cv2.imread(path + '/driver/scrollbar.png', 0)
         try:
-            matching_position = pag.locateCenterOnScreen(path + '/driver/scrollbar.png', confidence=0.7)
+            matching_position = pag.locateCenterOnScreen(path + '/driver/scrollbar.png', confidence=0.6)
         except:
-            self.text.run('blank 이미지 찾기에 실패했습니다. 다음 이미지로 넘어갑니다.')
-            return 0
+            self.text.run('슬라이드바 이미지 찾기에 실패했습니다.')
+            return Result.FAIL
         
         if matching_position == None:
-            return 2
+            return Result.UNKNOWN
 
         if self.debug_mode == True:
             target_x = matching_position.x - 160
@@ -2576,10 +2765,19 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(1)
             ret = self.ScrollPageDown()
         except:
-            self.text.run('blank 이미지 찾기에 실패했습니다. 다음 이미지로 넘어갑니다.')
-            return 0
+            self.text.run('슬라이드바 슬라이딩에 실패했습니다.')
+            return Result.FAIL
 
-        return 1
+        try:
+            matching_position = pag.locateCenterOnScreen(path + '/driver/scroll_fail.png', confidence=0.6)
+        except:
+            self.text.run('슬라이드바 fail 이미지 찾기에 실패했습니다.')
+            return Result.FAIL
+        
+        if matching_position == None:
+            return Result.PASS
+        else:
+            return Result.RETRY
         
     # 쓰레드 종료
     def KillThread(self):
