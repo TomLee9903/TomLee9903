@@ -1335,7 +1335,7 @@ class MyWindow(QMainWindow, form_class):
                             pass
                     except:
                         self.no_crawl = True
-                        return Result.FAIL
+                        ret = Result.FAIL
 
         if self.no_crawl == False:
             if '-' in price:
@@ -1355,7 +1355,7 @@ class MyWindow(QMainWindow, form_class):
                         price = float(price_temp)
                     except:
                         self.no_crawl = True
-                        return Result.FAIL
+                        ret = Result.FAIL
 
                         return ret, price, price_ori
         else:
@@ -1380,7 +1380,7 @@ class MyWindow(QMainWindow, form_class):
         if discount_per > int(self.dc_per):
             discounted_price = ''
             original_price = ''
-            return Result.FAIL
+            ret = Result.FAIL
 
         return ret, discounted_price, original_price
     
