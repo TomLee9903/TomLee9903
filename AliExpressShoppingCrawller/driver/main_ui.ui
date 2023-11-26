@@ -246,13 +246,10 @@
        <string>상품검색 타입</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QRadioButton" name="item_name_radio">
+       <item row="1" column="0">
+        <widget class="QRadioButton" name="coupon_radio">
          <property name="text">
-          <string>상품명 수집</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
+          <string>신규쿠폰</string>
          </property>
         </widget>
        </item>
@@ -270,10 +267,10 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QRadioButton" name="coupon_radio">
+       <item row="1" column="2">
+        <widget class="QRadioButton" name="quick_delivery_radio">
          <property name="text">
-          <string>신규쿠폰</string>
+          <string>깜짝 5일 배송</string>
          </property>
         </widget>
        </item>
@@ -284,10 +281,20 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="2">
-        <widget class="QRadioButton" name="quick_delivery_radio">
+       <item row="0" column="0">
+        <widget class="QRadioButton" name="item_name_radio">
          <property name="text">
-          <string>깜짝 5일 배송</string>
+          <string>상품명 수집</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QRadioButton" name="recom_radio">
+         <property name="text">
+          <string>추천 수집</string>
          </property>
         </widget>
        </item>
@@ -376,7 +383,7 @@
      <x>0</x>
      <y>0</y>
      <width>769</width>
-     <height>31</height>
+     <height>26</height>
     </rect>
    </property>
   </widget>
