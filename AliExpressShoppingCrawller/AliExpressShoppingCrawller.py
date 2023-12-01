@@ -257,7 +257,7 @@ class MyWindow(QMainWindow, form_class):
 
         return db
 
-    # 징동닷컴 크롤링 함수
+    # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
         self.text.run('PGM ver : 23112607')
@@ -322,7 +322,7 @@ class MyWindow(QMainWindow, form_class):
         
         self.detail_db = []
 
-    # 징동닷컴 URL 오픈
+    # 알리 URL 오픈
     @pyqtSlot()
     def OpenUrl(self):
         # try:
@@ -1429,10 +1429,10 @@ class MyWindow(QMainWindow, form_class):
         try:
             delivery_temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div').text
             if '무료 배송' not in delivery_temp:
-                delivery_for = '유료 배송'
+                delivery_for = '선불'
                 delivery_fee = float(delivery_temp.split('$')[1].split('\n')[0].split(' ')[0].replace(' ', ''))
             else:
-                delivery_for = '무료 배송'
+                delivery_for = '무료'
                 delivery_fee = 0
         except:
             return Result.FAIL, '', ''
