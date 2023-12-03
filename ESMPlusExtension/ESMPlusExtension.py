@@ -32,6 +32,16 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.alert import Alert
+from enum import Enum
+
+class PgmType(Enum):
+    EXTEND_SALE = 1
+    ENABLE_SALE = 2
+
+class Result(Enum):
+    FAIL = 0
+    PASS = 1
+    FINISH = 2
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -67,9 +77,12 @@ class MyWindow(QMainWindow, form_class):
         self.text = TextBrowser()               # UI에 text 출력 위한 객체
         self.windows_user_name = os.path.expanduser('~')
         self.refresh = False
+        self.pgm_type = PgmType.EXTEND_SALE
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
+        self.extend_sale_btn.clicked.connect(self.SetPgmType)
+        self.enable_sale_btn.clicked.connect(self.SetPgmType)
 
         # self.setAcceptDrops(True)
         # self.acceptDrops()
@@ -101,6 +114,12 @@ class MyWindow(QMainWindow, form_class):
     def QuitProgram(self):
         QCoreApplication.instance().quit
         self.KillThread()
+
+    def SetPgmType(self):
+        if self.extend_sale_btn.isChecked():
+            self.pgm_type = PgmType.EXTEND_SALE
+        else:
+            self.pgm_type = PgmType.ENABLE_SALE
 
     # 검색 버튼 누르면 실행되는 Run 함수
     def Run(self):
@@ -142,7 +161,7 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(2)
         pyautogui.press('f12')
 
-        self.text.run('알리익스프레스 URL open 완료')
+        self.text.run('ESM Plus URL open 완료')
         self.ac = ActionChains(self.driver)  # 셀레니움 동작을 바인딩 하여 동작 할 수 있게 하는 모듈                    
 
         time.sleep(self.process_delay)
@@ -151,10 +170,11 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def Start(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22102308')
+        self.text.run('PGM ver : 23120301')
         self.start_time = self.text.GetTime()
         self.i = 0
         self.j = 0
+        ret = Result.PASS
 
         self.OpenUrl()
         time.sleep(2)
@@ -162,18 +182,43 @@ class MyWindow(QMainWindow, form_class):
         
         cnt = 0
         while cnt < 100:
-            try:
-                self.ExtendSalePeriod()
-                # log-off
-                self.driver.find_element(By.CSS_SELECTOR, '#logoff').click()
-                time.sleep(self.process_delay)
-            except:
-                self.driver.close()
-                self.OpenUrl()
-                time.sleep(2)
-                self.LogIn()
-                cnt += 1
-                continue
+            if self.pgm_type == PgmType.ENABLE_SALE:
+                try:
+                    while True:
+                        ret = self.EnableSale()
+                        if ret == Result.FINISH:
+                            # log-off
+                            self.driver.find_element(By.CSS_SELECTOR, '#logoff').click()
+                            time.sleep(self.process_delay)
+                            break
+                    if ret == Result.FINISH:
+                        break
+                except:
+                    self.driver.close()
+                    self.OpenUrl()
+                    time.sleep(2)
+                    self.LogIn()
+                    cnt += 1
+                    continue
+            else:
+                try:
+                    self.EnterSalesControl()
+                    while True:
+                        ret = self.ExtendSalePeriod()
+                        if ret == Result.FINISH:
+                            # log-off
+                            self.driver.find_element(By.CSS_SELECTOR, '#logoff').click()
+                            time.sleep(self.process_delay)
+                            break
+                    if ret == Result.FINISH:
+                        break
+                except:
+                    self.driver.close()
+                    self.OpenUrl()
+                    time.sleep(2)
+                    self.LogIn()
+                    cnt += 1
+                    continue
         
         self.end_time = self.text.GetTime()
         diff_time = self.end_time - self.start_time
@@ -190,12 +235,6 @@ class MyWindow(QMainWindow, form_class):
         #self.driver.find_element(By.CSS_SELECTOR, '#container > div > div > div.box__content > div > button.button__tab.button__tab--auction').click()
         self.driver.find_element(By.CSS_SELECTOR, '#container > div > div > div.box__content > div > button.button__tab.button__tab--gmarket').click()
         time.sleep(1)
-
-        # 로그아웃 확인창
-        # try:
-        #     self.driver.find_element(By.CSS_SELECTOR, '#container > div > div > div.box__layer.is-active > div > div.button__wrap > button').click()
-        # except:
-        #     pass
 
         # log-in
         self.id_box = self.driver.find_element(By.CSS_SELECTOR, "#typeMemberInputId01")
@@ -226,123 +265,133 @@ class MyWindow(QMainWindow, form_class):
         self.textBrowser.append(print_str)
         self.textBrowser.repaint()
 
-    def ExtendSalePeriod(self):
-        while True:
-            # 상품 등록/변경 -> 상품관리2.0
-            self.driver.find_element(By.CSS_SELECTOR, '#TDM001').click()
+    def EnableSale(self):
+        self.EnterSalesControl()
+        ret = Result.PASS
+
+        # 판매중지 클릭
+        cnt = 0
+        while cnt < 60:
+            ben_sale = pyautogui.locateCenterOnScreen('./driver/ben_sale.PNG', confidence=0.95)
+            if ben_sale != None:
+                time.sleep(1)
+                break
+            else:
+                time.sleep(1)
+                cnt += 1
+        target_x = ben_sale.x - 30
+        pyautogui.moveTo(target_x, ben_sale.y)
+        pyautogui.click(target_x, ben_sale.y) # 해당 윈도우의 path 클릭
+        time.sleep(2)
+        
+        # # 전체 마켓 선택
+        # total_market = pyautogui.locateCenterOnScreen('./driver/select_all.PNG', confidence=0.7)
+        # if total_market == None:
+        #     break
+        # target_x = total_market.x + 30
+        # pyautogui.moveTo(target_x, total_market.y)
+        # pyautogui.click(target_x, total_market.y)
+        # time.sleep(3)
+
+        # 검색하기 클릭
+        cnt = 0
+        while cnt < 60:
+            search_btn = pyautogui.locateCenterOnScreen('./driver/search_btn.PNG', confidence=0.7)
+            if search_btn != None:
+                break
+            else:
+                time.sleep(1)
+                cnt += 1
+        pyautogui.moveTo(search_btn.x, search_btn.y)
+        pyautogui.click(search_btn.x, search_btn.y)
+        time.sleep(1)
+
+        self.driver.execute_script("window.scrollTo(0, 700)")
+        time.sleep(1)
+
+        # 모든 상품 수정됐는지 확인
+        no_items = pyautogui.locateCenterOnScreen('./driver/no_items.PNG', confidence=0.95)
+        if no_items != None:
             time.sleep(1)
-            self.driver.find_element(By.CSS_SELECTOR, '#TDM396').click()
-            time.sleep(2)
+            self.text.run('모든 페이지의 상품기간 연장이 완료되었습니다.')
+            ret = Result.FINISH
+            return ret
+        else:
+            pass
 
-            # 판매중지 클릭
-            cnt = 0
-            while cnt < 60:
-                ben_sale = pyautogui.locateCenterOnScreen('./driver/ben_sale.PNG', confidence=0.95)
-                if ben_sale != None:
-                    time.sleep(1)
-                    break
-                else:
-                    time.sleep(1)
-                    cnt += 1
-            target_x = ben_sale.x - 30
-            pyautogui.moveTo(target_x, ben_sale.y)
-            pyautogui.click(target_x, ben_sale.y) # 해당 윈도우의 path 클릭
-            time.sleep(2)
-            
-            # # 전체 마켓 선택
-            # total_market = pyautogui.locateCenterOnScreen('./driver/select_all.PNG', confidence=0.7)
-            # if total_market == None:
-            #     break
-            # target_x = total_market.x + 30
-            # pyautogui.moveTo(target_x, total_market.y)
-            # pyautogui.click(target_x, total_market.y)
-            # time.sleep(3)
-
-            # 검색하기 클릭
-            cnt = 0
-            while cnt < 60:
-                search_btn = pyautogui.locateCenterOnScreen('./driver/search_btn.PNG', confidence=0.7)
-                if search_btn != None:
-                    break
-                else:
-                    time.sleep(1)
-                    cnt += 1
-            pyautogui.moveTo(search_btn.x, search_btn.y)
-            pyautogui.click(search_btn.x, search_btn.y)
-            time.sleep(1)
-
-            self.driver.execute_script("window.scrollTo(0, 700)")
-            time.sleep(1)
-
-            # 수정 버튼 클릭
-            modify_btn = pyautogui.locateCenterOnScreen('./driver/no1_btn.PNG', confidence=0.95)
+        # 수정 버튼 클릭
+        cnt = 0
+        while cnt < 60:
+            #modify_btn = pyautogui.locateCenterOnScreen('./driver/no1_btn.PNG', confidence=0.95)
+            modify_btn = pyautogui.locateCenterOnScreen('./driver/modify_btn.PNG', confidence=0.95)
             if modify_btn != None:
                 time.sleep(1)
-                target_x = modify_btn.x + 300
-                target_y = modify_btn.y + 10
-                pyautogui.moveTo(target_x, target_y)
-                pyautogui.click(target_x, target_y)
-            else:
                 break
-            time.sleep(5)
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
+        # target_x = modify_btn.x + 300
+        # target_y = modify_btn.y + 10
+        pyautogui.moveTo(modify_btn.x, modify_btn.y)
+        pyautogui.click(modify_btn.x, modify_btn.y)
+        time.sleep(5)
 
+        cnt = 0
+        while cnt < 60:
+            # 판매가능 선택
             cnt = 0
             while cnt < 60:
-                # 판매가능 선택
-                cnt = 0
-                while cnt < 60:
-                    enable_sale = pyautogui.locateCenterOnScreen('./driver/enable_sale.PNG', confidence=0.95)
-                    if enable_sale != None:
-                        time.sleep(1)
-                        break
-                    else:
-                        time.sleep(1)
-                        cnt += 1
-                        continue
-                target_x = enable_sale.x - 20
-                pyautogui.moveTo(target_x, enable_sale.y)
-                pyautogui.click(target_x, enable_sale.y)
-                time.sleep(3)
+                enable_sale = pyautogui.locateCenterOnScreen('./driver/enable_sale.PNG', confidence=0.95)
+                if enable_sale != None:
+                    time.sleep(1)
+                    break
+                else:
+                    time.sleep(1)
+                    cnt += 1
+                    continue
+            target_x = enable_sale.x - 20
+            pyautogui.moveTo(target_x, enable_sale.y)
+            pyautogui.click(target_x, enable_sale.y)
+            time.sleep(3)
 
-                self.driver.execute_script("window.scrollTo(0, 900)")
+            self.driver.execute_script("window.scrollTo(0, 900)")
+            time.sleep(1)
+
+            # 기간연장 선택
+            extend_sale = pyautogui.locateCenterOnScreen('./driver/extend_btn.PNG', confidence=0.7)
+            if extend_sale != None:
+                target_x = extend_sale.x - 20
+                pyautogui.moveTo(target_x, extend_sale.y)
+                pyautogui.click(target_x, extend_sale.y)
                 time.sleep(1)
-
-                # 기간연장 선택
-                extend_sale = pyautogui.locateCenterOnScreen('./driver/extend_btn.PNG', confidence=0.7)
-                if extend_sale != None:
-                    target_x = extend_sale.x - 20
-                    pyautogui.moveTo(target_x, extend_sale.y)
-                    pyautogui.click(target_x, extend_sale.y)
-                    time.sleep(1)
-                else:
-                    time.sleep(1)
-                    cnt += 1
-                    continue
-                
-                # 판매기간 선택                
-                sale_period = pyautogui.locateCenterOnScreen('./driver/select_sale_period.PNG', confidence=0.7)
-                if sale_period != None:
-                    pyautogui.moveTo(sale_period.x, sale_period.y)
-                    pyautogui.click(sale_period.x, sale_period.y)
-                    time.sleep(1)
-                else:
-                    time.sleep(1)
-                    cnt += 1
-                    continue
-                
-                # 90일연장 선택
-                select_90days = pyautogui.locateCenterOnScreen('./driver/select_90days.PNG', confidence=0.8)
-                if select_90days != None:
-                    target_y = select_90days.y + 45
-                    pyautogui.moveTo(select_90days.x, target_y)
-                    pyautogui.click(select_90days.x, target_y)
-                    time.sleep(1)
-                else:
-                    time.sleep(1)
-                    cnt += 1
-                    continue
-
-                break
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
+            
+            # 판매기간 선택                
+            sale_period = pyautogui.locateCenterOnScreen('./driver/select_sale_period.PNG', confidence=0.7)
+            if sale_period != None:
+                pyautogui.moveTo(sale_period.x, sale_period.y)
+                pyautogui.click(sale_period.x, sale_period.y)
+                time.sleep(1)
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
+            
+            # 90일연장 선택
+            select_90days = pyautogui.locateCenterOnScreen('./driver/select_90days.PNG', confidence=0.8)
+            if select_90days != None:
+                target_y = select_90days.y + 12
+                pyautogui.moveTo(select_90days.x, target_y)
+                pyautogui.click(select_90days.x, target_y)
+                time.sleep(1)
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
 
             # 수정하기 클릭
             cnt = 0
@@ -376,7 +425,7 @@ class MyWindow(QMainWindow, form_class):
                 time.sleep(1)
                 cnt = 0
                 is_done = False
-                while cnt < 5:
+                while cnt < 10:
                     modify_complete = pyautogui.locateCenterOnScreen('./driver/modify_complete.PNG', confidence=0.7)
                     if modify_complete != None:
                         is_done = True
@@ -386,7 +435,9 @@ class MyWindow(QMainWindow, form_class):
                         cnt += 1
 
                 if is_done == True:
-                    continue
+                    self.i += 1
+                    self.text.run('{}번째 상품 상품기간 연장 성공!'.format(self.i))
+                    return ret
 
                 self.driver.execute_script("window.scrollTo(0, 1800)")
                 time.sleep(1)
@@ -433,6 +484,144 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(1)
             self.i += 1
             self.text.run('{}번째 상품 상품기간 연장 성공!'.format(self.i))
+            break
+
+        return ret
+
+    def ExtendSalePeriod(self):
+        ret = Result.PASS
+        # 판매종료 7일전 클릭
+        cnt = 0
+        while cnt < 60:
+            end_7days = pyautogui.locateCenterOnScreen('./driver/end_7days.PNG', confidence=0.95)
+            if end_7days != None:
+                time.sleep(1)
+                break
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
+        target_x = end_7days.x + 20
+        target_y = end_7days.y + 30
+        pyautogui.moveTo(target_x, target_y)
+        pyautogui.click(target_x, target_y) # 해당 윈도우의 path 클릭
+        time.sleep(2)
+        
+        # 전체 마켓 선택
+        cnt = 0
+        while cnt < 60:
+            total_market = pyautogui.locateCenterOnScreen('./driver/all_markets.PNG', confidence=0.7)
+            if total_market != None:
+                time.sleep(1)
+                break
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
+        target_x = total_market.x + 30
+        pyautogui.moveTo(target_x, total_market.y)
+        pyautogui.click(target_x, total_market.y)
+        time.sleep(3)
+
+        # 검색하기 클릭
+        cnt = 0
+        while cnt < 60:
+            search_btn = pyautogui.locateCenterOnScreen('./driver/search_btn.PNG', confidence=0.7)
+            if search_btn != None:
+                break
+            else:
+                time.sleep(1)
+                cnt += 1
+                continue
+        pyautogui.moveTo(search_btn.x, search_btn.y)
+        pyautogui.click(search_btn.x, search_btn.y)
+        time.sleep(1)
+
+        self.driver.execute_script("window.scrollTo(0, 700)")
+        time.sleep(1)
+
+        while True:
+            # 상품연장 다 끝났는지 확인
+            no_items = pyautogui.locateCenterOnScreen('./driver/no_items.PNG', confidence=0.95)
+            if no_items != None:
+                time.sleep(1)
+                ret = Result.FINISH
+                self.text.run('모든 페이지의 상품기간 연장이 완료되었습니다.')
+                break
+            else:
+                pass
+
+            # 판매연장 파일 30개 클릭
+            cnt = 0
+            while cnt < 60:
+                all_select = pyautogui.locateCenterOnScreen('./driver/all_btn.PNG', confidence=0.95)
+                if all_select != None:
+                    time.sleep(1)
+                    break
+                else:
+                    time.sleep(1)
+            pyautogui.moveTo(all_select.x, all_select.y)
+            pyautogui.click(all_select.x, all_select.y)
+            time.sleep(1)
+
+            # 판매기간연장 클릭
+            cnt = 0
+            while cnt < 60:
+                cnt = 0
+                extend_sale = pyautogui.locateCenterOnScreen('./driver/extend_sale.PNG', confidence=0.95)
+                if extend_sale != None:
+                    time.sleep(1)
+                    break
+                else:
+                    time.sleep(1)
+                    cnt += 1
+                    continue
+            pyautogui.moveTo(extend_sale.x, extend_sale.y)
+            pyautogui.click(extend_sale.x, extend_sale.y)
+            time.sleep(1)
+
+            # 확인 선택
+            cnt = 0
+            while cnt < 60:
+                confirm_btn = pyautogui.locateCenterOnScreen('./driver/confirm2.PNG', confidence=0.95)
+                if extend_sale != None:
+                    time.sleep(1)
+                    break
+                else:
+                    time.sleep(1)
+                    cnt += 1
+                    continue
+            pyautogui.moveTo(confirm_btn.x, confirm_btn.y)
+            pyautogui.click(confirm_btn.x, confirm_btn.y)
+            time.sleep(1)
+
+            # 처리중입니다... 안보일 때 확인 버튼 클릭
+            cnt = 0
+            while cnt < 60:
+                processing = pyautogui.locateCenterOnScreen('./driver/processing.PNG', confidence=0.7)
+                if processing == None:
+                    confirm_btn = pyautogui.locateCenterOnScreen('./driver/confirm3.PNG', confidence=0.95)
+                    pyautogui.moveTo(confirm_btn.x, confirm_btn.y)
+                    pyautogui.click(confirm_btn.x, confirm_btn.y)
+                    time.sleep(1)
+                    break
+                else:
+                    time.sleep(1)
+                    cnt += 1
+                    continue
+            
+            time.sleep(1)
+            self.i += 1
+            self.text.run('{}번째 페이지 상품기간 연장 성공!'.format(self.i))
+
+        return ret
+
+    def EnterSalesControl(self):
+        # 상품 등록/변경 -> 상품관리2.0
+        self.driver.find_element(By.CSS_SELECTOR, '#TDM001').click()
+        time.sleep(1)
+        self.driver.find_element(By.CSS_SELECTOR, '#TDM396').click()
+        time.sleep(2)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
