@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>769</width>
-    <height>789</height>
+    <width>765</width>
+    <height>780</height>
    </rect>
   </property>
   <property name="font">
@@ -246,41 +246,6 @@
        <string>상품검색 타입</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="1" column="0">
-        <widget class="QRadioButton" name="coupon_radio">
-         <property name="text">
-          <string>신규쿠폰</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QRadioButton" name="category_radio">
-         <property name="text">
-          <string>카테고리 수집</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QRadioButton" name="super_deal_radio">
-         <property name="text">
-          <string>슈퍼딜 수집</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QRadioButton" name="quick_delivery_radio">
-         <property name="text">
-          <string>깜짝 5일 배송</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QRadioButton" name="free_radio">
-         <property name="text">
-          <string>꽁돈대첩 수집</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QRadioButton" name="item_name_radio">
          <property name="text">
@@ -291,10 +256,10 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QRadioButton" name="recom_radio">
+       <item row="0" column="1">
+        <widget class="QRadioButton" name="category_radio">
          <property name="text">
-          <string>추천 수집</string>
+          <string>카테고리 수집</string>
          </property>
         </widget>
        </item>
@@ -372,6 +337,13 @@
          </property>
         </widget>
        </item>
+       <item row="1" column="3">
+        <widget class="QCheckBox" name="enable_simple_data_btn">
+         <property name="text">
+          <string>심플데이터 수집</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
@@ -382,8 +354,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>769</width>
-     <height>26</height>
+     <width>765</width>
+     <height>31</height>
     </rect>
    </property>
   </widget>
@@ -399,10 +371,6 @@
   <tabstop>enable_discount</tabstop>
   <tabstop>item_name_radio</tabstop>
   <tabstop>category_radio</tabstop>
-  <tabstop>super_deal_radio</tabstop>
-  <tabstop>coupon_radio</tabstop>
-  <tabstop>free_radio</tabstop>
-  <tabstop>quick_delivery_radio</tabstop>
   <tabstop>url_btn</tabstop>
   <tabstop>run_btn</tabstop>
   <tabstop>exit_btn</tabstop>
