@@ -445,7 +445,7 @@ class MyWindow(QMainWindow, form_class):
                 cnt = 0
                 y = 1800
                 while cnt < 60:
-                    no_approval = pyautogui.locateCenterOnScreen('./driver/no_approval.PNG', confidence=0.7)
+                    no_approval = pyautogui.locateCenterOnScreen('./driver/no_approval.PNG', confidence=0.95)
                     if no_approval != None:
                         break
                     else:
@@ -453,8 +453,8 @@ class MyWindow(QMainWindow, form_class):
                         self.driver.execute_script("window.scrollTo(0, {})".format(y))
                         time.sleep(1)
                         cnt += 1
-                pyautogui.moveTo(no_approval.x, no_approval.y)
-                pyautogui.click(no_approval.x, no_approval.y)
+                pyautogui.moveTo(no_approval.x - 45, no_approval.y)
+                pyautogui.click(no_approval.x - 45, no_approval.y)
 
                 # 수정하기 클릭
                 cnt = 0
