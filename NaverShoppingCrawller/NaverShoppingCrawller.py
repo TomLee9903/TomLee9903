@@ -168,7 +168,7 @@ class MyWindow(QMainWindow, form_class):
             shopping_btn = self.driver.find_element_by_xpath('//*[@id="NM_FAVORITE"]/div[1]/ul[1]/li[5]/a').click()
         try:
             # 쇼핑 페이지로 잘 넘어왔는지 체크하는 코드
-            element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#_verticalGnbModule > div > div > div._gnb_header_shop_Xd6Hq > div > h1 > a')))
+            element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#_verticalGnbModule > div > div._header_header_REoTl > div > div._gnb_header_shop_Xd6Hq > div > div._gnbSearch_search_area_3LAyd > form > fieldset > div > input')))
         except:
             self.text.run('네이버 쇼핑 URL open에 실패했습니다.')
             self.driver.quit()
@@ -176,8 +176,8 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(self.process_delay)
         # 검색창
         try:
-            search_tab = self.driver.find_element_by_css_selector('#_verticalGnbModule > div > div > div._gnb_header_shop_Xd6Hq > div > div._gnbSearch_search_area_3LAyd > form > fieldset > div > input')
-        except:
+            search_tab = self.driver.find_element_by_css_selector('#_verticalGnbModule > div > div._header_header_REoTl > div > div._gnb_header_shop_Xd6Hq > div > div._gnbSearch_search_area_3LAyd > form > fieldset > div > input')
+        except:                                                    
             self.text.run('검색에 실패했습니다.')
             self.restart = True
             return 0
@@ -204,8 +204,8 @@ class MyWindow(QMainWindow, form_class):
         # time.sleep(self.process_delay)
 
          # 80개씩 보기
-        view_item_tab = self.driver.find_element_by_css_selector('#__next > div > div.style_container__1YjHN > div.style_inner__18zZX > div.style_content_wrap__1PzEo > div.style_content__2T20F > div.seller_filter_area > div > div.subFilter_sort_choice__1SFXG > div:nth-child(3)').click()
-        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#__next > div > div.style_container__1YjHN > div.style_inner__18zZX > div.style_content_wrap__1PzEo > div.style_content__2T20F > div.seller_filter_area > div > div.subFilter_sort_choice__1SFXG > div.subFilter_select_box__1bM64.open > ul > li:nth-child(4)'))).click()
+        view_item_tab = self.driver.find_element_by_css_selector('#__next > div > div.style_container__1YjHN > div.style_inner__18zZX > div.style_content_wrap__1PzEo > div.style_content__2T20F > div.seller_filter_area > div.subFilter_sort_area__ZBnvs > div.subFilter_sort_choice__1SFXG > div.subFilter_select_box__1bM64').click()
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#__next > div > div.style_container__1YjHN > div.style_inner__18zZX > div.style_content_wrap__1PzEo > div.style_content__2T20F > div.seller_filter_area > div.subFilter_sort_area__ZBnvs > div.subFilter_sort_choice__1SFXG > div.subFilter_select_box__1bM64.open > ul > li:nth-child(4)'))).click()
         time.sleep(2)
         # 금액 설정
         self.start_price_str = self.start_price.text()
@@ -410,6 +410,21 @@ class MyWindow(QMainWindow, form_class):
                               self.image_save_link[idx], self.category[idx], self.item_name[idx], self.tag[idx], self.review_cnt[idx], 
                               self.price[idx], self.delivery_fee[idx]])
                 wb.save("{}\\".format(current_path) + now_date + self.target_word.replace('/','') + "_results.xlsx")
+                #wb.save("{}\\".format(img_folder) + now_date + self.target_word.replace('/','') + "_results.xlsx")
+
+                result_folder = self.result_folder.text()
+                if result_folder == '':
+                    result_folder = "네이버 결과물"
+
+                result_path = windows_user_name + '\\Desktop\\' + result_folder + '\\'
+                try:
+                    if not os.path.isdir(result_path):
+                        os.mkdir(result_path)
+                except OSError:
+                    self.text.run('결과물 폴더를 생성하는데 실패했습니다.')
+                    break
+
+                wb.save('{}'.format(result_path) + self.target_word.replace('/','') + "_results.xlsx")
 
                 self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(i + 1, idx + 1))
 

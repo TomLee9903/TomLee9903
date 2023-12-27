@@ -199,7 +199,7 @@ class MyWindow(QMainWindow, form_class):
     # 징동닷컴 크롤링 함수
     def StartTranslate(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 22101507')
+        self.text.run('PGM ver : 22111410')
         self.start_time = self.text.GetTime()
         self.i = 0
         self.j = 0
@@ -315,7 +315,8 @@ class MyWindow(QMainWindow, form_class):
 
         elif self.translate_target == 1:                
             while True:
-                ret, option1_list_temp, option2_list, option1_total = self.TranslateOption(self.df['옵션1'][self.j], self.df['옵션2'][self.j], self.df['옵션_종합'][self.j])
+                #ret, option1_list_temp, option2_list, option1_total = self.TranslateOption(self.df['옵션1'][self.j], self.df['옵션2'][self.j], self.df['옵션_종합'][self.j])
+                ret, option1_list_temp, option2_list, option1_total = self.TranslateOptionFull(self.df['옵션1'][self.j], self.df['옵션2'][self.j], self.df['옵션_종합'][self.j])
                 is_same = self.CheckTranslateLanguage()
                 if cnt == 3:
                     self.text.run('웹페이지에 오류로 인해 번역이 중단되었습니다.')
@@ -391,7 +392,8 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(0.5)
             cnt = 0
             while True:
-                ret, option1_list, option2_list, option1_total = self.TranslateOption(self.df['옵션1'][self.j], self.df['옵션2'][self.j], self.df['옵션_종합'][self.j])
+                #ret, option1_list, option2_list, option1_total = self.TranslateOption(self.df['옵션1'][self.j], self.df['옵션2'][self.j], self.df['옵션_종합'][self.j])
+                ret, option1_list_temp, option2_list, option1_total = self.TranslateOptionFull(self.df['옵션1'][self.j], self.df['옵션2'][self.j], self.df['옵션_종합'][self.j])
                 is_same = self.CheckTranslateLanguage()
                 if cnt == 3:
                     self.text.run('웹페이지에 오류로 인해 번역이 중단되었습니다.')
@@ -490,6 +492,117 @@ class MyWindow(QMainWindow, form_class):
         self.current_text = self.right.text
         return ret, self.right.text
 
+    def TranslateOptionFull(self, option1_list, option2_list, option1_total):
+        ret = 1
+        cnt = 0
+        option1_list_translated = []
+        option2_list_translated = []
+        option1_total_translated = []
+
+        try:
+            self.left.clear()
+        except:
+            ret = 0
+            return ret, option1_list, option2_list, option1_total
+        
+        if option1_list != '':
+            while True:
+                if cnt == 3:
+                    ret = 0
+                    return ret, option1_list, option2_list, option1_total
+                try:
+                    try:
+                        self.left.clear()
+                    except:
+                        ret = 0
+                        return ret, option1_list, option2_list, option1_total
+                    time.sleep(1)
+                    left_option1 = []
+                    right_option1 = []
+                    split_option1 = option1_list.split('\n')
+                    for i in range(len(split_option1)):
+                        if split_option1[i] != '':
+                            left_option1.append(split_option1[i].split(';')[0] + ';')
+                            right_option1.append(split_option1[i].split(';')[1])
+                    self.left.send_keys('\n'.join(left_option1))
+                    if self.silent_mode == False:
+                        self.translate_btn.click()
+                except:
+                    ret = 0
+                    return ret, option1_list, option2_list, option1_total
+
+                time.sleep(4)
+                if self.right.text != '':
+                    option1_list_translated = self.right.text.replace(' ; ',';').replace('; ',';').split('\n')
+                    for i in range(len(option1_list_translated)):
+                        if ';' not in option1_list_translated[i]:
+                            option1_list_translated[i] += ';'
+                        if len(right_option1) != 0:
+                            option1_list_translated[i] += right_option1[i]
+                    break
+                else:
+                    cnt += 1
+                    continue
+
+        if option2_list != '':
+            while True:
+                if cnt == 3:
+                    ret = 0
+                    return ret, option1_list, option2_list, option1_total
+                try:
+                    try:
+                        self.left.clear()
+                    except:
+                        ret = 0
+                        return ret, option1_list, option2_list, option1_total
+                    time.sleep(1)              
+                    self.left.send_keys(option2_list)
+                    if self.silent_mode == False:
+                        self.translate_btn.click()
+                except:
+                    ret = 0
+                    return ret, option1_list, option2_list, option1_total
+
+                time.sleep(4)
+                if self.right.text != '':
+                    option2_list_translated = self.right.text.replace(' ; ',';').replace('; ',';').split('\n')
+                    for i in range(len(option2_list_translated)):
+                        if ';' not in option2_list_translated[i]:
+                            option2_list_translated[i] += ';'
+                    break
+                else:
+                    cnt += 1
+                    continue
+        
+        if option1_total != '':
+            while True:
+                if cnt == 3:
+                    ret = 0
+                    return ret, option1_list, option2_list, option1_total
+                try:
+                    try:
+                        self.left.clear()
+                    except:
+                        ret = 0
+                        return ret, option1_list, option2_list, option1_total
+                    time.sleep(1)
+                    self.left.send_keys(option1_total)
+                    if self.silent_mode == False:
+                        self.translate_btn.click()
+                except:
+                    ret = 0
+                    return ret, option1_list, option2_list, option1_total
+
+                time.sleep(4)
+                if self.right.text != '':
+                    option1_total_translated = self.right.text.replace(' / ','/').replace('/ ','/').split('\n')
+                    break
+                else:
+                    cnt += 1
+                    continue
+
+        return ret, option1_list_translated, option2_list_translated, option1_total_translated
+
     def TranslateOption(self, option1_list, option2_list, option1_total):
         ret = 1
         cnt = 0
@@ -570,7 +683,7 @@ class MyWindow(QMainWindow, form_class):
                         ret = 0
                         return ret, option1_list_temp, option2_list_temp, option1_total_temp
 
-                    time.sleep(3)
+                    time.sleep(5)
                     if self.right.text != '':
                         break
                     else:
@@ -596,7 +709,7 @@ class MyWindow(QMainWindow, form_class):
                             return ret, option1_list_temp, option2_list_temp, option1_total_temp
                         try:
                             self.left.clear()
-                            time.sleep(1)
+                            time.sleep(2)
                             temp = '\n'.join(temp1_option)
                             self.left.send_keys(temp)
                             if self.silent_mode == False:
@@ -605,7 +718,7 @@ class MyWindow(QMainWindow, form_class):
                             ret = 0
                             return ret, option1_list_temp, option2_list_temp, option1_total_temp
 
-                        time.sleep(3)
+                        time.sleep(5)
                         if self.right.text != '' and self.right.text != temp:
                             break
                         else:
@@ -655,7 +768,7 @@ class MyWindow(QMainWindow, form_class):
                     ret = 0
                     return ret, option1_list_temp, option2_list_temp, option1_total_temp
 
-                time.sleep(3)
+                time.sleep(5)
                 option2_temp = self.right.text.split('\n')
                 if len(option2_temp) == len(temp3_option):
                     for j in range(len(option2_temp)):
@@ -670,7 +783,7 @@ class MyWindow(QMainWindow, form_class):
                             return ret, option1_list_temp, option2_list_temp, option1_total_temp
                         try:
                             self.left.clear()
-                            time.sleep(1)
+                            time.sleep(2)
                             temp = '\n'.join(temp3_option)
                             self.left.send_keys(temp)
                             if self.silent_mode == False:
@@ -679,7 +792,7 @@ class MyWindow(QMainWindow, form_class):
                             ret = 0
                             return ret, option1_list_temp, option2_list_temp, option1_total_temp
 
-                        time.sleep(3)
+                        time.sleep(5)
                         if self.right.text != '' and self.right.text != temp:
                             break
                         else:
