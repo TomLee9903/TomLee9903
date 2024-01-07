@@ -56,6 +56,7 @@ class Result(Enum):
     PASS = 1
     UNKNOWN = 2
     RETRY = 3
+    PAGE_MISMATCH = 4
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -260,14 +261,13 @@ class MyWindow(QMainWindow, form_class):
     # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 23112607')
+        self.text.run('PGM ver : 24010708')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
         self.windows_user_name = os.path.expanduser('~')
         self.sku_id = []
         self.final_cnt = 0
-        self.i = 0
         self.idx = 0
         self.search_url = ""
         self.no_crawl = False
@@ -286,10 +286,17 @@ class MyWindow(QMainWindow, form_class):
         else:
             self.dc_per = 100.0
 
-        if self.page_cnt.text() != "":
-            self.cnt_page = int(self.page_cnt.text())
+        if self.page_min.text() != "" and self.page_max.text() != "":
+            self.page_min_num = int(self.page_min.text())
+            self.page_max_num = int(self.page_max.text())
+            self.i = self.page_min_num - 1
+            self.cnt_page = (self.page_max_num - self.page_min_num) + 1
         else:
+            self.page_min_num = 1
+            self.page_max_num = 1
+            self.i = 0
             self.cnt_page = 1
+
         self.tb = pd.read_excel('./driver/sheet_reference.xlsx')
         self.columns = list(self.tb.columns)
         self.wb = openpyxl.Workbook()
@@ -433,7 +440,18 @@ class MyWindow(QMainWindow, form_class):
         ret = self.InitializeSettingOnPage()
         if ret == Result.FAIL:
             ret = self.InitializeSettingOnPage()
+        elif ret == Result.PAGE_MISMATCH:
+            self.final_cnt = 0
+            self.idx = 0
+            self.j = 0
+            self.i = 0
+            self.sheet = []
+            self.wb = openpyxl.Workbook()
+            self.sheet = self.wb.active
+            self.sheet.append(self.columns)
 
+            return Result.PASS
+        
         while True:
             ret = self.CrawlData()
             if ret == Result.PASS:
@@ -547,6 +565,22 @@ class MyWindow(QMainWindow, form_class):
             self.cnt += 1
             return Result.FAIL
 
+        try:
+            self.max_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div')))[0].text.split('/')[1].split('확인하다')[0])
+            if self.max_page < self.page_min_num:
+                self.i = self.max_page - 1
+
+            page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > input[type=text]')))[0]
+            goto_page = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > button')))[0]
+            self.ac.move_to_element(page_input).send_keys_to_element(page_input, self.page_min_num).pause(2).perform()
+            goto_page.click()
+            time.sleep(5)
+            
+            ret = self.ScrollPageDown(True)
+        except:
+            self.text.run('검색한 상품의 총 페이지수가 설정한 페이지 범위와 맞지 않습니다. 다시 설정 후 시도해주세요.')
+            return Result.PAGE_MISMATCH
+        
         self.num_temp = 0
         self.sub_idx = 0
         self.id_list = []
@@ -756,93 +790,41 @@ class MyWindow(QMainWindow, form_class):
         except:
             if self.extra == 0 or self.extra == 1:
                 try:
-                    retry_cnt = 0
-                    return_flag = False
-                    while self.cnt < 5:
-                        if self.cnt == 5:
-                            self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
-                            self.text.run('크롤링이 완료되었습니다.')
-                            self.j = 0
-                            self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                            # 크롬드라이버 종료
-                            self.end_time = self.text.GetTime()
-                            diff_time = self.end_time - self.start_time
-                            self.text.run('--End work--')
-                            self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                            self.restart = True
+                    if self.i == (self.max_page - 1):
+                        self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.j = 0
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
 
+                        return Result.PASS
+                    else:
+                        self.text.run('상품명 검색을 재시도 합니다.')
+                        self.CloseItemPage()
+                        first_tab = self.driver.window_handles[self.close_page_num - 1]
+                        self.driver.switch_to.window(window_name=first_tab)
+                        self.ClickSearchButton()
+                        time.sleep(2)
+                        ret = self.ScrollPageDown()
+                        if ret == Result.FAIL:
+                            self.text.run('웹페이지 로딩에 실패했습니다.')
+                            self.CloseItemPage()
+                            self.cnt += 1
                             return Result.PASS
 
-                        try:
-                            previous_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--left--3ZLy8Mu > ul > li.pagination--paginationLink--2ucXUo6.pagination--isActive--58C6XTV')))[0].text)
-                            next_btn = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-next > button')))[0]
-                            while retry_cnt < 5:
-                                try:
-                                    next_btn.click()
-                                    time.sleep(5)
-                                    break
-                                except:
-                                    time.sleep(self.process_delay)
-                                    self.driver.execute_script("window.scrollTo(0, 0)")
-                                    retry_cnt += 1
-                                    return_flag = True
-
-                            if return_flag == True:
-                                self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
-                                self.text.run('크롤링이 완료되었습니다.')
-                                self.j = 0
-                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                                # 크롬드라이버 종료
-                                self.end_time = self.text.GetTime()
-                                diff_time = self.end_time - self.start_time
-                                self.text.run('--End work--')
-                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                                self.restart = True
-
-                                return Result.PASS
-
-                            time.sleep(self.process_delay)
-                            current_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--left--3ZLy8Mu > ul > li.pagination--paginationLink--2ucXUo6.pagination--isActive--58C6XTV')))[0].text)
-                            
-                            if previous_page == current_page:
-                                self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
-                                self.text.run('크롤링이 완료되었습니다.')
-                                self.j = 0
-                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                                # 크롬드라이버 종료
-                                self.end_time = self.text.GetTime()
-                                diff_time = self.end_time - self.start_time
-                                self.text.run('--End work--')
-                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                                self.restart = True
-
-                                return Result.PASS
-                            else:
-                                self.j = 0
-                                self.i += 1
-                                time.sleep(self.process_delay)
-                        except:
-                            self.text.run('상품명 검색을 재시도 합니다.')
-                            self.CloseItemPage()
-                            self.ClickSearchButton()
-                            time.sleep(2)
-                            WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--right--gUH5L-E > input')))[0].clear()
-                            time.sleep(1)
-                            ret = self.ScrollPageDown()
-                            if ret == Result.FAIL:
-                                self.text.run('웹페이지 로딩에 실패했습니다.')
-                                self.CloseItemPage()
-                                self.cnt += 1
-                                return Result.FAIL
-                            page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--right--gUH5L-E > input')))[0]
-                            page_num = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--left--3ZLy8Mu > ul > li.pagination--paginationLink--2ucXUo6.pagination--isActive--58C6XTV')))[0].text
-                            goto_page = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0 > div > div.right--container--1WU9aL4.right--hasPadding--52H__oG > div > div.content--container--2dDeH1y > div.pagination--paginationList--2qhuJId > div.pagination--right--gUH5L-E > span.pagination--jumpBtn--3e69BYK')))[0]
-                            self.ac.move_to_element(page_input).send_keys_to_element(page_input, self.i + 1).pause(2).perform()
-                            goto_page.click()
-                            time.sleep(5)
-                            self.driver.execute_script("window.scrollTo(0, 0)")
-                            time.sleep(2)
-                            self.cnt += 1
+                        page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > input[type=text]')))[0]
+                        goto_page = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > button')))[0]
+                        self.ac.move_to_element(page_input).send_keys_to_element(page_input, self.i+1).pause(2).perform()
+                        goto_page.click()
+                        time.sleep(5)
+                        self.driver.execute_script("window.scrollTo(0, 0)")
+                        time.sleep(2)
+                        self.cnt += 1
 
                         # 페이지 스크롤 최대치로 내리기
                         cnt = 0
@@ -892,10 +874,8 @@ class MyWindow(QMainWindow, form_class):
                                     
                             self.ac.move_to_element(self.temp).pause(0.5).click().perform()
                             time.sleep(1)
-                            break
                         except:
                             self.cnt += 1
-                            continue
                 except:
                     self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
                     self.text.run('크롤링이 완료되었습니다.')
@@ -965,11 +945,42 @@ class MyWindow(QMainWindow, form_class):
                         self.text.run('{}페이지 {}번째 상품은 연령인증이 필요한 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                         self.CloseItemPage()
                         if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                            self.ClickNextPage()
+                            if (self.i + 1) == self.page_max_num:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
 
-                            self.j = 0
-                            self.i += 1
-                            time.sleep(self.process_delay)
+                                return Result.PASS
+                            elif (self.i + 1) == self.max_page:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
+
+                                return Result.PASS
+                            else:
+                                self.ClickNextPage()
+
+                                self.j = 0
+                                self.i += 1
+                                time.sleep(self.process_delay)
                         else:
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -982,11 +993,42 @@ class MyWindow(QMainWindow, form_class):
                         self.text.run('{}페이지 {}번째 상품은 다른 포맷의 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                         self.CloseItemPage()
                         if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                            self.ClickNextPage()
+                            if (self.i + 1) == self.page_max_num:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
 
-                            self.j = 0
-                            self.i += 1
-                            time.sleep(self.process_delay)
+                                return Result.PASS
+                            elif (self.i + 1) == self.max_page:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
+
+                                return Result.PASS
+                            else:
+                                self.ClickNextPage()
+
+                                self.j = 0
+                                self.i += 1
+                                time.sleep(self.process_delay)
                         else:
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1009,11 +1051,42 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
 
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1029,11 +1102,42 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
 
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1059,10 +1163,41 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 아이템은 옵션이 있는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1114,11 +1249,42 @@ class MyWindow(QMainWindow, form_class):
                         self.text.run('{}페이지 {}번째 상품은 연령인증이 필요한 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                         self.CloseItemPage()
                         if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                            self.ClickNextPage()
+                            if (self.i + 1) == self.page_max_num:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
 
-                            self.j = 0
-                            self.i += 1
-                            time.sleep(self.process_delay)
+                                return Result.PASS
+                            elif (self.i + 1) == self.max_page:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
+
+                                return Result.PASS
+                            else:
+                                self.ClickNextPage()
+
+                                self.j = 0
+                                self.i += 1
+                                time.sleep(self.process_delay)
                         else:
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1131,10 +1297,41 @@ class MyWindow(QMainWindow, form_class):
 
             self.CloseItemPage()
             if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                self.ClickNextPage()
-                self.j = 0
-                self.i += 1
-                time.sleep(self.process_delay)
+                if (self.i + 1) == self.page_max_num:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                elif (self.i + 1) == self.max_page:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                else:
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
             else:
                 self.j += 1
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1164,10 +1361,41 @@ class MyWindow(QMainWindow, form_class):
             self.text.run('{}페이지 {}번째 아이템의 배송정보 획득에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
             self.CloseItemPage()
             if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                self.ClickNextPage()
-                self.j = 0
-                self.i += 1
-                time.sleep(self.process_delay)
+                if (self.i + 1) == self.page_max_num:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                elif (self.i + 1) == self.max_page:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                else:
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
             else:
                 self.j += 1
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -1179,10 +1407,41 @@ class MyWindow(QMainWindow, form_class):
         if self.no_crawl == True:
             self.CloseItemPage()
             if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                self.ClickNextPage()
-                self.j = 0
-                self.i += 1
-                time.sleep(self.process_delay)
+                if (self.i + 1) == self.page_max_num:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                elif (self.i + 1) == self.max_page:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                else:
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
             else:
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
                 self.j += 1
@@ -1205,10 +1464,41 @@ class MyWindow(QMainWindow, form_class):
         if self.no_crawl == True:
             self.CloseItemPage()
             if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                self.ClickNextPage()
-                self.j = 0
-                self.i += 1
-                time.sleep(self.process_delay)
+                if (self.i + 1) == self.page_max_num:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                elif (self.i + 1) == self.max_page:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                else:
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
             else:
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
                 self.j += 1
@@ -1231,33 +1521,63 @@ class MyWindow(QMainWindow, form_class):
         self.SaveFile()
         self.CloseItemPage()
 
-        if self.final_cnt == (self.cnt_page * 60) - 1:
-            self.final_cnt += 1
-            if (self.extra == 0 or self.extra == 1):
-                self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-            self.text.run('마지막 아이템입니다.')
-            self.text.run('크롤링이 완료되었습니다.')
-            self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-            # 크롬드라이버 종료
-            self.end_time = self.text.GetTime()
-            diff_time = self.end_time - self.start_time
-            self.text.run('--End work--')
-            self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-            self.restart = True
-
-            return Result.PASS
-        else:
-            if (self.extra == 0 or self.extra == 1):
-                self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-            if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                self.ClickNextPage()
-                self.j = 0
-                self.i += 1
+        if (self.extra == 0 or self.extra == 1):
+            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+        if self.j == 59 and (self.extra == 0 or self.extra == 1):
+            if (self.i + 1) == self.page_max_num:
                 self.final_cnt += 1
-                self.idx += 1
-                time.sleep(self.process_delay)
+                if (self.extra == 0 or self.extra == 1):
+                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                self.text.run('마지막 아이템입니다.')
+                self.text.run('크롤링이 완료되었습니다.')
                 self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                return Result.FAIL 
+                # 크롬드라이버 종료
+                self.end_time = self.text.GetTime()
+                diff_time = self.end_time - self.start_time
+                self.text.run('--End work--')
+                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                self.restart = True
+
+                return Result.PASS
+            elif (self.i + 1) == self.max_page:
+                self.final_cnt += 1
+                if (self.extra == 0 or self.extra == 1):
+                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                self.text.run('마지막 아이템입니다.')
+                self.text.run('크롤링이 완료되었습니다.')
+                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                # 크롬드라이버 종료
+                self.end_time = self.text.GetTime()
+                diff_time = self.end_time - self.start_time
+                self.text.run('--End work--')
+                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                self.restart = True
+
+                return Result.PASS
+            else:
+                ret = self.ClickNextPage()
+                if ret == Result.PASS:
+                    self.text.run('{}페이지가 마지막 페이지입니다.'.format(self.i + 1))
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.j = 0
+                    self.final_cnt += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                else:
+                    self.j = 0
+                    self.i += 1
+                    self.final_cnt += 1
+                    self.idx += 1
+                    time.sleep(self.process_delay)
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    return Result.FAIL 
 
         self.final_cnt += 1
         self.idx += 1
@@ -2373,11 +2693,42 @@ class MyWindow(QMainWindow, form_class):
                         self.text.run('{}번째 상품은 연령인증이 필요한 상품입니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
                         self.CloseItemPage()
                         if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                            self.ClickNextPage()
+                            if (self.i + 1) == self.page_max_num:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
 
-                            self.j = 0
-                            self.i += 1
-                            time.sleep(self.process_delay)
+                                return Result.PASS
+                            elif (self.i + 1) == self.max_page:
+                                self.final_cnt += 1
+                                if (self.extra == 0 or self.extra == 1):
+                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                                self.text.run('마지막 아이템입니다.')
+                                self.text.run('크롤링이 완료되었습니다.')
+                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                                # 크롬드라이버 종료
+                                self.end_time = self.text.GetTime()
+                                diff_time = self.end_time - self.start_time
+                                self.text.run('--End work--')
+                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                                self.restart = True
+
+                                return Result.PASS
+                            else:
+                                self.ClickNextPage()
+
+                                self.j = 0
+                                self.i += 1
+                                time.sleep(self.process_delay)
                         else:
                             self.j += 1
                             self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
@@ -2404,10 +2755,41 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
@@ -2423,11 +2805,42 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
 
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -2571,10 +2984,41 @@ class MyWindow(QMainWindow, form_class):
                 self.text.run('{}페이지 {}번째 아이템의 배송정보 획득에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.j += 1
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
@@ -2586,10 +3030,41 @@ class MyWindow(QMainWindow, form_class):
             if self.no_crawl == True:
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    self.ClickNextPage()
-                    self.j = 0
-                    self.i += 1
-                    time.sleep(self.process_delay)
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
                 else:
                     self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
                     self.j += 1
@@ -2722,17 +3197,6 @@ class MyWindow(QMainWindow, form_class):
                     WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="root"]/div[1]/div/div[2]/div[3]/ul/li[9]/button'))).click()
                     time.sleep(self.process_delay)
                 except:
-                    self.text.run('{}페이지가 마지막 페이지입니다.'.format(self.i + 1))
-                    self.text.run('크롤링이 완료되었습니다.')
-                    self.j = 0
-                    self.final_cnt += 1
-                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                    # 크롬드라이버 종료
-                    self.end_time = self.text.GetTime()
-                    diff_time = self.end_time - self.start_time
-                    self.text.run('--End work--')
-                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                    self.restart = True
                     return Result.PASS
 
     def SlideNetworkCheck(self):
