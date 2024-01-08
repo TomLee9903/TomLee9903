@@ -570,13 +570,14 @@ class MyWindow(QMainWindow, form_class):
             if self.max_page < self.page_min_num:
                 self.i = self.max_page - 1
 
-            page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > input[type=text]')))[0]
-            goto_page = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > button')))[0]
-            self.ac.move_to_element(page_input).send_keys_to_element(page_input, self.page_min_num).pause(2).perform()
-            goto_page.click()
-            time.sleep(5)
+            if self.i != 0:
+                page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > input[type=text]')))[0]
+                goto_page = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > button')))[0]
+                self.ac.move_to_element(page_input).send_keys_to_element(page_input, self.page_min_num).pause(2).perform()
+                goto_page.click()
+                time.sleep(5)
             
-            ret = self.ScrollPageDown(True)
+                ret = self.ScrollPageDown(True)
         except:
             self.text.run('검색한 상품의 총 페이지수가 설정한 페이지 범위와 맞지 않습니다. 다시 설정 후 시도해주세요.')
             return Result.PAGE_MISMATCH
