@@ -261,7 +261,7 @@ class MyWindow(QMainWindow, form_class):
     # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 24010708')
+        self.text.run('PGM ver : v24011001')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -566,9 +566,14 @@ class MyWindow(QMainWindow, form_class):
             return Result.FAIL
 
         try:
-            self.max_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div')))[0].text.split('/')[1].split('확인하다')[0])
-            if self.max_page < self.page_min_num:
+            try:
+                self.max_page = int(WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div')))[0].text.split('/')[1].split('확인하다')[0])
+                if self.max_page < self.page_min_num:
+                    self.i = self.max_page - 1
+            except:
+                self.max_page = 1
                 self.i = self.max_page - 1
+                self.cnt_page = 1
 
             if self.i != 0:
                 page_input = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.rightContent2023--rightContainer--2abV4r5 > div.cards2023--pagination--1-0Grbh > ul > li.comet-pagination-options > div > input[type=text]')))[0]
