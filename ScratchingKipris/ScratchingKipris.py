@@ -18,6 +18,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.keys import Keys
 import sys
 import time
 import datetime
@@ -28,6 +29,11 @@ import subprocess
 from enum import Enum
 import openpyxl
 import pyautogui
+import tkinter
+from tkinter.filedialog import askopenfilename
+import googletrans as google
+import requests
+import urllib
 
 class SearchType(Enum):
     SINGLE = 1
@@ -45,6 +51,10 @@ class NameType(Enum):
 class Available(Enum):
     DISABLE = 0
     ENABLE = 1
+
+class ItemNameGen(Enum):
+    NAVER_API = 0
+    FILE_A_COL = 1
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -81,13 +91,32 @@ class MyWindow(QMainWindow, form_class):
         self.windows_user_name = os.path.expanduser('~')
         self.refresh = False
         self.search_type = SearchType.SINGLE
+        self.filename = ''
+        self.enable_network_search = False
+        self.allow_ratio = 0.0
+        self.ratio = pd.DataFrame()
+        self.translator = google.Translator()
+        self.naver_client_id = 'iAAEerUQpIaDxyilmrml'
+        self.naver_client_secret = 'c4pGpSMQl3'
+        self.item_name_generate = ItemNameGen.NAVER_API
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
         self.enable_multiple_search_btn.clicked.connect(self.SetMultipleSearch)
-
+        
         # Set admin state
         self.admin_all_btn.clicked.connect(self.SetAdminStateAll)
+
+        # Set File path to analyze brand name
+        self.set_file_path_btn.clicked.connect(self.SetFilePath)
+
+        # Analyze brand name
+        self.start_analyze_btn.clicked.connect(self.RunAnalyzeBrandName)
+        self.enable_network_search_btn.clicked.connect(self.SetNetworkSearch)
+
+        # Set item name generation type
+        self.naver_api_radio.clicked.connect(self.SetItemNameGeneration)
+        self.file_acol_radio.clicked.connect(self.SetItemNameGeneration)
 
     # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
     def closeEvent(self, QCloseEvent): 
@@ -111,6 +140,7 @@ class MyWindow(QMainWindow, form_class):
         self.df = pd.read_excel(self.filename)
         self.df.fillna('', inplace=True)
         self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1].replace('.xlsx','')))
+        self.file_path_input.setText(self.filename)
 
     # 종료 버튼 누르면 실행되는 함수
     def QuitProgram(self):
@@ -122,12 +152,22 @@ class MyWindow(QMainWindow, form_class):
             self.search_type = SearchType.MULTIPLE
         else:
             self.search_type = SearchType.SINGLE
+    
+    def SetItemNameGeneration(self):
+        if self.naver_api_radio.isChecked():
+            self.item_name_generate = ItemNameGen.NAVER_API
+        else:
+            self.item_name_generate = ItemNameGen.FILE_A_COL
 
     # 검색 버튼 누르면 실행되는 Run 함수
     def Run(self):
         self.th = threading.Thread(target=self.Start)
-        self.th.daemon = True
         self.th.start()
+
+    # 상품명 분석 누르면 실행되는 Run 함수
+    def RunAnalyzeBrandName(self):
+        self.th2 = threading.Thread(target=self.AnalyzeBrandName)
+        self.th2.start()
 
     # 파파고 URL 오픈
     @pyqtSlot()
@@ -168,11 +208,45 @@ class MyWindow(QMainWindow, form_class):
 
         time.sleep(self.process_delay)
     
+    def Retry(self):
+        # URL open
+        self.driver.close()
+        time.sleep(2)
+        self.OpenUrl()
+        time.sleep(2)
+
+        ret = self.PressSmartSearch()
+        if ret == Result.FAIL:
+            self.text.run('스마트검색 클릭에 실패했습니다.')
+            return
+        time.sleep(1)
+        
+        self.driver.find_element(By.CSS_SELECTOR, '#measure01').click()
+        time.sleep(1)
+        for i in range(len(self.admin_state)):
+            check_state = eval('self.admin_{}_btn'.format(i+1)).checkState()
+            if check_state == 2:
+                self.admin_state[i] = Available.ENABLE
+            else:
+                self.admin_state[i] = Available.DISABLE
+            
+            if self.admin_state[i] == Available.ENABLE:
+                elem_name = '#measure0{}'.format(i+2)
+                self.driver.find_element(By.CSS_SELECTOR, elem_name).click()
+                time.sleep(0.3)
+
+        ret = self.PressFullySameButton()
+        if ret == Result.FAIL:
+            self.text.run('완전일치검색 클릭에 실패했습니다.')
+            return
+        time.sleep(1)
+        ret = self.PressSmartSearch()
+
     @pyqtSlot()
     # 징동닷컴 크롤링 함수
     def Start(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : v24011301')
+        self.text.run('PGM ver : v24011401')
         self.start_time = self.text.GetTime()
         self.i = 0
         self.j = 0
@@ -182,12 +256,44 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(2)
         
         # Gather search list depending on search type
-        if self.search_type == SearchType.MULTIPLE:
-            self.search_list = pd.read_excel('./driver/SearchList.xlsx')
-        else:
+        if self.enable_network_search == True:
+            self.search_type = SearchType.MULTIPLE
             self.search_list = pd.DataFrame()
-            self.search_list.loc[0, str('상표명칭')] = self.brand_name_input.text()
-            self.search_list.loc[0, str('지정상품')] = self.item_name_input.text()
+            if self.allow_min_ratio_input.text() != '':
+                self.allow_min_ratio = float(self.allow_min_ratio_input.text())
+            else:
+                self.allow_min_ratio = 0.0
+
+            if self.allow_max_ratio_input.text() != '':
+                self.allow_max_ratio = float(self.allow_max_ratio_input.text())
+            else:
+                self.allow_max_ratio = 100.0
+
+            if len(self.ratio) < 1:
+                filename = self.GetAnalysisFileName()
+                self.ratio = pd.read_excel(filename)
+                self.ratio.fillna('', inplace=True)
+
+            for i in range(len(self.ratio)):
+                ratio = self.ratio.loc[i, '포함비율']
+                if ratio >= self.allow_min_ratio and ratio < self.allow_max_ratio:
+                    self.search_list.loc[i, str('상표명칭')] = self.ratio.loc[i, '키워드명']
+                    self.search_list.loc[i, str('지정상품')] = self.ratio.loc[i, '지정상품명']
+        else:
+            if self.search_type == SearchType.MULTIPLE:
+                self.search_list = pd.read_excel('./driver/SearchList.xlsx')
+            else:
+                self.search_list = pd.DataFrame()
+                if self.brand_name_input.text() != '':
+                    self.search_list.loc[0, str('상표명칭')] = self.brand_name_input.text()
+                else:
+                    self.text.run('상표명칭을 입력해주세요.')
+                    return
+                if self.item_name_input.text() != '':
+                    self.search_list.loc[0, str('지정상품')] = self.item_name_input.text()
+                else:
+                    self.text.run('지정상품을 입력해주세요.')
+                    return
         
         # Initialize admin state buttons
         self.admin_state = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -196,9 +302,12 @@ class MyWindow(QMainWindow, form_class):
         self.sheet = self.wb.active
         self.sheet.append(columns)
 
-        for i in range(len(self.search_list)):
-            brand_name = self.search_list.iloc[i][NameType.BRAND_NAME.value]
-            item_name = self.search_list.iloc[i][NameType.ITEM_NAME.value]
+        cnt = 0
+        i = 0
+        #for i in range(len(self.search_list)):
+        while i < len(self.search_list):
+            brand_name = self.TranslateGoogle(self.search_list.iloc[i][NameType.BRAND_NAME.value], 'ko')
+            item_name = self.TranslateGoogle(self.search_list.iloc[i][NameType.ITEM_NAME.value], 'ko')
             if i != 0:
                 time.sleep(1)
                 self.driver.execute_script("window.scrollTo(0, 100)")
@@ -207,64 +316,73 @@ class MyWindow(QMainWindow, form_class):
             ret = self.PressSmartSearch()
             if ret == Result.FAIL:
                 self.text.run('스마트검색 클릭에 실패했습니다.')
-                return
+                self.Retry()
+                continue
             time.sleep(1)
 
             # Set admin state
             if i == 0:
                 self.driver.find_element(By.CSS_SELECTOR, '#measure01').click()
                 time.sleep(1)
-                for i in range(len(self.admin_state)):
-                    check_state = eval('self.admin_{}_btn'.format(i+1)).checkState()
+                for j in range(len(self.admin_state)):
+                    check_state = eval('self.admin_{}_btn'.format(j+1)).checkState()
                     if check_state == 2:
-                        self.admin_state[i] = Available.ENABLE
+                        self.admin_state[j] = Available.ENABLE
                     else:
-                        self.admin_state[i] = Available.DISABLE
+                        self.admin_state[j] = Available.DISABLE
                     
-                    if self.admin_state[i] == Available.ENABLE:
-                        elem_name = '#measure0{}'.format(i+2)
+                    if self.admin_state[j] == Available.ENABLE:
+                        elem_name = '#measure0{}'.format(j+2)
                         self.driver.find_element(By.CSS_SELECTOR, elem_name).click()
                         time.sleep(0.3)
 
                 ret = self.PressFullySameButton()
                 if ret == Result.FAIL:
                     self.text.run('완전일치검색 클릭에 실패했습니다.')
-                    return
+                    self.Retry()
+                    continue
                 time.sleep(1)
 
             ret = self.PunInBrandName(brand_name)
             if ret == Result.FAIL:
                 self.text.run('상표명칭 입력에 실패했습니다.')
-                return
+                self.Retry()
+                continue
             time.sleep(1)
 
             ret = self.PunInItemName(item_name)
             if ret == Result.FAIL:
                 self.text.run('지정상품 입력에 실패했습니다.')
-                return
+                self.Retry()
+                continue
             time.sleep(1)
 
             ret = self.PressSearchButton()
             if ret == Result.FAIL:
                 self.text.run('상품 검색에 실패했습니다.')
-                return
+                self.Retry()
+                continue
             time.sleep(5)
 
             # 상표권 유무
-            no_found = pyautogui.locateCenterOnScreen('./driver/no_found.PNG', confidence=0.9)
-            is_exist = '없음'
-            if no_found != None:
-                is_exist = '없음'
-            else:
+            try:
+                no_found = self.driver.find_element(By.CSS_SELECTOR, '#content').text
+                if '없습니다' in no_found:
+                    is_exist = '없음'
+                else:
+                    is_exist = '있음'
+            except:
                 is_exist = '있음'
-
+                
             self.sheet.append([brand_name, item_name, is_exist])
             if self.search_type == SearchType.MULTIPLE:
                 self.SaveFile('다중검색')
             else:
                 self.SaveFile('{}_{}'.format(brand_name, item_name))
 
-            self.text.run('{}, {} 검색을 완료했습니다. 결과 : 상표권 {}'.format(brand_name, item_name, is_exist))
+            self.text.run('[{} / {}] 검색을 완료했습니다. 결과 : 상표권 {}'.format(brand_name, item_name, is_exist))
+            self.text.run('{}개 / {}개 검색 중'.format(i+1, len(self.search_list)))
+            i += 1
 
         self.end_time = self.text.GetTime()
         diff_time = self.end_time - self.start_time
@@ -345,9 +463,7 @@ class MyWindow(QMainWindow, form_class):
     def PressSearchButton(self):
         ret = Result.PASS
         try:
-            self.driver.execute_script("window.scrollTo(0, 900)")
-            time.sleep(1)
-            self.driver.find_element(By.CSS_SELECTOR, '#btnItemizedSearch > img').click()
+            self.ac.send_keys(Keys.ENTER).perform()
         except:
             ret = Result.FAIL
 
@@ -391,20 +507,179 @@ class MyWindow(QMainWindow, form_class):
 
     def SaveFile(self, suffix = ''):
         ret = Result.PASS
-        now_time = self.text.GetTime().strftime('%y%m%d%H')
+        now_time = self.text.GetTime().strftime('%y%m%d')
 
         file_folder = '{}\\Desktop\\키프리스_결과물'.format(self.windows_user_name)
-        filename = '{}\\{}'.format(file_folder, now_time + '_{}_Kipris_SearchResults.xlsx'.format(suffix))
+        filename = '{}\\{}'.format(file_folder, '{}_{}_Kipris_SearchResults.xlsx'.format(now_time, suffix))
         try:
             if not os.path.isdir(file_folder):
                 os.mkdir(file_folder)
         except OSError:
             self.text.run('파일 폴더를 생성하는데 실패했습니다.')
-            return 0
+            return Result.FAIL
 
         self.wb.save(filename)
-        #self.tb_temp.to_excel(filename, index=False)
-        return 1
+        return ret
+    
+    def SaveFileWithDataFrame(self, df, file_name):
+        ret = Result.PASS
+        now_time = self.text.GetTime().strftime('%y%m%d')
+
+        file_folder = '{}\\Desktop\\키프리스_결과물\\상품명_분석'.format(self.windows_user_name)
+        filename = '{}\\{}'.format(file_folder, '{}_{}_상품명분석_Kipris_SearchResults.xlsx'.format(now_time, file_name))
+        try:
+            if not os.path.isdir(file_folder):
+                os.mkdir(file_folder)
+        except OSError:
+            self.text.run('파일 폴더를 생성하는데 실패했습니다.')
+            return Result.FAIL
+
+        df.to_excel(filename, index=False)
+        return ret
+    
+    def SetFilePath(self):
+        root = tkinter.Tk()
+        root.withdraw()
+        self.filename = askopenfilename(parent=root, filetypes=[('수집데이터 엑셀', '.xlsx')], initialdir=self.windows_user_name, title='분석을 원하시는 파일을 선택해주세요')
+        if self.filename != '':
+            self.df = pd.read_excel(self.filename)
+            self.df.fillna('', inplace=True)
+            self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1].replace('.xlsx','')))
+        self.file_path_input.setText(self.filename)
+    
+    def GetAnalysisFileName(self):
+        root = tkinter.Tk()
+        root.withdraw()
+        filename = askopenfilename(parent=root, filetypes=[('분석데이터 엑셀', '.xlsx')], initialdir=self.windows_user_name, title='연동할 분석 데이터 파일을 선택해주세요')
+        self.text.run('파일 이름 : {}'.format(filename.split('/')[-1].replace('.xlsx','')))
+
+        return filename
+
+    def SetNetworkSearch(self):
+        if self.enable_network_search_btn.isChecked():
+            self.enable_network_search = True
+        else:
+            self.enable_network_search = False
+
+    @pyqtSlot()
+    def AnalyzeBrandName(self):
+        self.text.run('--Start to analyze--')
+        start_time = self.text.GetTime()
+        self.target_brand_list = self.df.iloc[:, 15]
+        self.target_item_list = self.df.iloc[:, 0]
+        self.splited_brand_list = []
+        self.ratio = pd.DataFrame()
+        idx = 0
+        item_idx = 0
+        ratio_cnt = 0
+
+        for target in self.target_brand_list:
+            splited_name = target.split(' ')
+            len_splited = len(splited_name)
+            self.splited_brand_list.append(' '.join(splited_name[0:round(len_splited / 2)]))
+
+        for t1 in self.splited_brand_list:
+            splited_target = t1.split(' ')
+            for t2 in splited_target:
+                self.ratio.loc[idx, str('키워드명')] = t2
+                if self.item_name_generate == ItemNameGen.NAVER_API:
+                    ret, category1, category2 = self.MatchingCategory(t2)
+                    if ret != Result.PASS:
+                        self.text.run('네이버 API 사용량을 초과했습니다. 내일 다시 시도해주세요.')
+                        self.ratio = self.ratio.drop_duplicates(['키워드명'], keep='last', ignore_index = True)
+                        self.text.run('중복된 키워드를 제거하여 총 {}개의 키워드 분석이 완료되었습니다.'.format(len(self.ratio['키워드명'])))
+                        ret = self.SaveFileWithDataFrame(self.ratio, self.filename.split('/')[-1].split('.')[0])
+
+                        end_time = self.text.GetTime()
+                        diff_time = end_time - start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        return
+
+                    self.ratio.loc[idx, str('지정상품명')] = category2
+                else:
+                    self.ratio.loc[idx, str('지정상품명')] = self.target_item_list[item_idx].split('-')[0]
+                
+                for t3 in self.splited_brand_list:
+                    if t2 in t3:
+                        ratio_cnt += 1
+                self.ratio.loc[idx, str('포함개수')] = ratio_cnt
+                self.ratio.loc[idx, str('포함비율')] = (ratio_cnt / len(self.splited_brand_list)) * 100
+
+                self.text.run('{}번째 키워드 분석이 완료되었습니다.'.format(idx + 1))
+                idx += 1
+                ratio_cnt = 0
+            item_idx += 1
+
+        self.ratio = self.ratio.drop_duplicates(['키워드명'], keep='last', ignore_index = True)
+        self.text.run('중복된 키워드를 제거하여 총 {}개의 키워드 분석이 완료되었습니다.'.format(len(self.ratio['키워드명'])))
+        ret = self.SaveFileWithDataFrame(self.ratio, self.filename.split('/')[-1].split('.')[0])
+
+        end_time = self.text.GetTime()
+        diff_time = end_time - start_time
+        self.text.run('--End work--')
+        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+
+    def TranslateGoogle(self, text, option):
+        try:
+            return self.translator.translate(text, dest=option).text
+        except:
+            return self.translator.translate(text, dest=option).text
+
+    def MatchingCategory(self, query):
+        ret = Result.PASS
+        ct1_temp = pd.DataFrame()
+        ct2_temp = pd.DataFrame()
+
+        try:
+            q = urllib.parse.quote(query)
+            url = "https://openapi.naver.com/v1/search/shop?query=" + q + "&display=50"
+
+            request = urllib.request.Request(url)
+            request.add_header('X-Naver-Client-Id', self.naver_client_id)
+            request.add_header('X-Naver-Client-Secret', self.naver_client_secret)
+
+            response = urllib.request.urlopen(request)
+            rr = response.read().decode('utf-8')
+            category1_list = rr.split('"category1"')[1:]
+            category2_list = rr.split('"category2"')[1:]
+
+            ct1 = pd.DataFrame()
+            ct2 = pd.DataFrame()
+
+            for i in range(len(category1_list)):
+                try:
+                    ct1.loc[i, '카테고리'] = category1_list[i].split('",')[0].split('"')[1].split('/')[1].split('\\')[0]
+                except:
+                    ct1.loc[i, '카테고리'] = category1_list[i].split('",')[0].split('"')[1].split('/')[0].split('\\')[0]
+            
+            ct1 = ct1.drop_duplicates(['카테고리'], keep='last', ignore_index = True)
+            for i in range(len(ct1)):
+                ct1_temp.loc[i, '카테고리'] = ct1.loc[i, '카테고리']
+                ct1_cnt = len(ct1[ct1['카테고리'] == ct1.loc[i, '카테고리']])
+                ct1_temp.loc[i, '포함비율'] = (ct1_cnt / len(ct1)) * 100
+
+            for i in range(len(category2_list)):
+                try:
+                    ct2.loc[i, '카테고리'] = category2_list[i].split('",')[0].split('"')[1].split('/')[1].split('\\')[0]
+                except:
+                    ct2.loc[i, '카테고리'] = category2_list[i].split('",')[0].split('"')[1].split('/')[0].split('\\')[0]
+            
+            ct2 = ct2.drop_duplicates(['카테고리'], keep='last', ignore_index = True)
+            for i in range(len(ct2)):
+                ct2_temp.loc[i, '카테고리'] = ct2.loc[i, '카테고리']
+                ct2_cnt = len(ct2[ct2['카테고리'] == ct2.loc[i, '카테고리']])
+                ct2_temp.loc[i, '포함비율'] = (ct2_cnt / len(ct2)) * 100
+
+            category1 = ct1_temp.loc[ct1_temp['포함비율'].idxmax()]['카테고리']
+            category2 = ct2_temp.loc[ct2_temp['포함비율'].idxmax()]['카테고리']
+        
+        except:
+            ret = Result.FAIL
+            category1 = ''
+            category2 = ''
+
+        return ret, category1, category2
 
     # 쓰레드 종료
     def KillThread(self):

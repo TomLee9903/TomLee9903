@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>591</width>
-    <height>662</height>
+    <width>595</width>
+    <height>669</height>
    </rect>
   </property>
   <property name="font">
@@ -22,13 +22,13 @@
    <bool>true</bool>
   </property>
   <property name="windowTitle">
-   <string>Kipris 상표권 검색 프로그램 v24011301</string>
+   <string>Kipris 상표권 검색 프로그램 v24011401</string>
   </property>
   <property name="toolTipDuration">
    <number>-2</number>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout_4">
+   <layout class="QGridLayout" name="gridLayout_7">
     <item row="0" column="0">
      <widget class="QLabel" name="label">
       <property name="text">
@@ -153,7 +153,109 @@
       </layout>
      </widget>
     </item>
-    <item row="2" column="0" colspan="2">
+    <item row="2" column="0">
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="title">
+       <string>상품명 비율 측정</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="1" colspan="2">
+        <widget class="QLineEdit" name="file_path_input"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="set_file_path_btn">
+         <property name="text">
+          <string>파일 경로</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QPushButton" name="start_analyze_btn">
+         <property name="text">
+          <string>상품명 분석</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QGroupBox" name="groupBox_5">
+      <property name="title">
+       <string>지정상품</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="0" column="0">
+        <widget class="QRadioButton" name="naver_api_radio">
+         <property name="text">
+          <string>네이버 API</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QRadioButton" name="file_acol_radio">
+         <property name="text">
+          <string>파일 A열</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="3" column="0" colspan="2">
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="title">
+       <string>상품명 비율 설정</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;허용 비율&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QLineEdit" name="allow_max_ratio_input">
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="allow_min_ratio_input">
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="4">
+        <widget class="QCheckBox" name="enable_network_search_btn">
+         <property name="text">
+          <string>분석 비율 연동 검색 활성화</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;to&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="4" column="0" colspan="2">
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="1" column="0">
        <widget class="QPushButton" name="run_btn">
@@ -206,8 +308,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>591</width>
-     <height>31</height>
+     <width>595</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>
@@ -226,6 +328,14 @@
   <tabstop>admin_6_btn</tabstop>
   <tabstop>admin_7_btn</tabstop>
   <tabstop>admin_8_btn</tabstop>
+  <tabstop>set_file_path_btn</tabstop>
+  <tabstop>file_path_input</tabstop>
+  <tabstop>start_analyze_btn</tabstop>
+  <tabstop>naver_api_radio</tabstop>
+  <tabstop>file_acol_radio</tabstop>
+  <tabstop>allow_min_ratio_input</tabstop>
+  <tabstop>allow_max_ratio_input</tabstop>
+  <tabstop>enable_network_search_btn</tabstop>
   <tabstop>textBrowser</tabstop>
   <tabstop>run_btn</tabstop>
   <tabstop>exit_btn</tabstop>
