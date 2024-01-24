@@ -78,6 +78,7 @@ class MyWindow(QMainWindow, form_class):
         self.windows_user_name = os.path.expanduser('~')
         self.refresh = False
         self.pgm_type = PgmType.EXTEND_SALE
+        self.wide_display = True
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
@@ -384,7 +385,10 @@ class MyWindow(QMainWindow, form_class):
             # 90일연장 선택
             select_90days = pyautogui.locateCenterOnScreen('./driver/select_90days.PNG', confidence=0.8)
             if select_90days != None:
-                target_y = select_90days.y + 12
+                if self.wide_display == True:
+                    target_y = select_90days.y + 12
+                else:
+                    target_y = select_90days.y + 25
                 pyautogui.moveTo(select_90days.x, target_y)
                 pyautogui.click(select_90days.x, target_y)
                 time.sleep(1)
