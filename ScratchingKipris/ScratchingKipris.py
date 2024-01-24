@@ -19,6 +19,8 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import sys
 import time
 import datetime
@@ -34,6 +36,7 @@ from tkinter.filedialog import askopenfilename
 import googletrans as google
 import requests
 import urllib
+import json
 
 class SearchType(Enum):
     SINGLE = 1
@@ -51,10 +54,6 @@ class NameType(Enum):
 class Available(Enum):
     DISABLE = 0
     ENABLE = 1
-
-class ItemNameGen(Enum):
-    NAVER_API = 0
-    FILE_A_COL = 1
 
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
@@ -89,16 +88,15 @@ class MyWindow(QMainWindow, form_class):
         self.process_delay = 1.5
         self.text = TextBrowser()               # UI에 text 출력 위한 객체
         self.windows_user_name = os.path.expanduser('~')
-        self.refresh = False
         self.search_type = SearchType.SINGLE
         self.filename = ''
         self.enable_network_search = False
         self.allow_ratio = 0.0
         self.ratio = pd.DataFrame()
         self.translator = google.Translator()
-        self.naver_client_id = 'iAAEerUQpIaDxyilmrml'
-        self.naver_client_secret = 'c4pGpSMQl3'
-        self.item_name_generate = ItemNameGen.NAVER_API
+        self.url_link = ''
+        self.pgm_ver = 'v24012002'
+        self.category = pd.DataFrame()
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
@@ -112,11 +110,8 @@ class MyWindow(QMainWindow, form_class):
 
         # Analyze brand name
         self.start_analyze_btn.clicked.connect(self.RunAnalyzeBrandName)
+        self.start_naver_analyze_btn.clicked.connect(self.RunAnalyzeNaverCategory)
         self.enable_network_search_btn.clicked.connect(self.SetNetworkSearch)
-
-        # Set item name generation type
-        self.naver_api_radio.clicked.connect(self.SetItemNameGeneration)
-        self.file_acol_radio.clicked.connect(self.SetItemNameGeneration)
 
     # UI 창닫기 버튼 클릭하면 종료 의사 묻는 팝업창 띄우기
     def closeEvent(self, QCloseEvent): 
@@ -153,12 +148,6 @@ class MyWindow(QMainWindow, form_class):
         else:
             self.search_type = SearchType.SINGLE
     
-    def SetItemNameGeneration(self):
-        if self.naver_api_radio.isChecked():
-            self.item_name_generate = ItemNameGen.NAVER_API
-        else:
-            self.item_name_generate = ItemNameGen.FILE_A_COL
-
     # 검색 버튼 누르면 실행되는 Run 함수
     def Run(self):
         self.th = threading.Thread(target=self.Start)
@@ -169,9 +158,17 @@ class MyWindow(QMainWindow, form_class):
         self.th2 = threading.Thread(target=self.AnalyzeBrandName)
         self.th2.start()
 
+    def RunAnalyzeNaverCategory(self):
+        self.th3 = threading.Thread(target=self.AnalyzeNaverCategory)
+        self.th3.start()
+
     # 파파고 URL 오픈
     @pyqtSlot()
-    def OpenUrl(self):
+    def OpenUrl(self, url_link=''):
+        if 'naver' in url_link:
+            url_name = '네이버'
+        else:
+            url_name = '키프리스'
         try:
             subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9225 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
         except:
@@ -197,13 +194,13 @@ class MyWindow(QMainWindow, form_class):
 
         # 윈도우 사이즈 맥스로 키우기
         self.driver.maximize_window()
-        self.driver.get('http://kdtj.kipris.or.kr/kdtj/searchLogina.do?method=loginTM')
+        self.driver.get(url_link)
         time.sleep(1)
         pyautogui.press('f12')
         time.sleep(2)
         pyautogui.press('f12')
 
-        self.text.run('Kipris URL open 완료')
+        self.text.run('{} URL open 완료'.format(url_name))
         self.ac = ActionChains(self.driver)  # 셀레니움 동작을 바인딩 하여 동작 할 수 있게 하는 모듈                    
 
         time.sleep(self.process_delay)
@@ -212,7 +209,7 @@ class MyWindow(QMainWindow, form_class):
         # URL open
         self.driver.close()
         time.sleep(2)
-        self.OpenUrl()
+        self.OpenUrl(self.url_link)
         time.sleep(2)
 
         ret = self.PressSmartSearch()
@@ -241,18 +238,26 @@ class MyWindow(QMainWindow, form_class):
             return
         time.sleep(1)
         ret = self.PressSmartSearch()
+    
+    def ReOpenUrl(self):
+        # URL open
+        self.driver.close()
+        time.sleep(2)
+        self.OpenUrl(self.url_link)
+        time.sleep(2)
 
     @pyqtSlot()
     # 징동닷컴 크롤링 함수
     def Start(self):
+        self.url_link = 'http://kdtj.kipris.or.kr/kdtj/searchLogina.do?method=loginTM'
         self.text.run('--Start work--')
-        self.text.run('PGM ver : v24011401')
+        self.text.run('PGM ver : {}'.format(self.pgm_ver))
         self.start_time = self.text.GetTime()
         self.i = 0
         self.j = 0
         ret = Result.PASS
         # URL open
-        self.OpenUrl()
+        self.OpenUrl(self.url_link)
         time.sleep(2)
         
         # Gather search list depending on search type
@@ -270,7 +275,7 @@ class MyWindow(QMainWindow, form_class):
                 self.allow_max_ratio = 100.0
 
             if len(self.ratio) < 1:
-                filename = self.GetAnalysisFileName()
+                filename = self.GetFileName()
                 self.ratio = pd.read_excel(filename)
                 self.ratio.fillna('', inplace=True)
 
@@ -306,8 +311,13 @@ class MyWindow(QMainWindow, form_class):
         i = 0
         #for i in range(len(self.search_list)):
         while i < len(self.search_list):
-            brand_name = self.TranslateGoogle(self.search_list.iloc[i][NameType.BRAND_NAME.value], 'ko')
-            item_name = self.TranslateGoogle(self.search_list.iloc[i][NameType.ITEM_NAME.value], 'ko')
+            brand_name = self.search_list.iloc[i][NameType.BRAND_NAME.value]
+            item_name = self.search_list.iloc[i][NameType.ITEM_NAME.value].split('/')[0]
+            if item_name == '':
+                self.text.run('{}번째 지정상품명이 공백입니다. 다음으로 넘어갑니다.'.format(i + 1))
+                i += 1
+                continue
+            
             if i != 0:
                 time.sleep(1)
                 self.driver.execute_script("window.scrollTo(0, 100)")
@@ -386,6 +396,164 @@ class MyWindow(QMainWindow, form_class):
 
         self.end_time = self.text.GetTime()
         diff_time = self.end_time - self.start_time
+        self.text.run('--End work--')
+        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+        self.driver.close()
+
+    @pyqtSlot()
+    def AnalyzeNaverCategory(self):
+        ret = Result.PASS
+        self.url_link = 'https://shopping.naver.com/home'
+        self.category_ref = pd.read_excel('./driver/category_reference.xlsx').fillna('없음')
+        self.start_time = self.text.GetTime()
+        
+        # URL open
+        self.OpenUrl(self.url_link)
+        time.sleep(2)
+
+        item_list = list(self.df.iloc[:, 15])
+        start_time = self.text.GetTime()
+        i = 0
+        cnt = 0
+        while cnt < 50:
+            if i == len(item_list):
+                break
+            # 상품명 검색
+            try:
+                self.driver.get('https://search.shopping.naver.com/search/all?query={}&pagingSize=80'.format(item_list[i]))
+                time.sleep(1)
+                age_check = self.driver.find_element(By.CSS_SELECTOR, '#container > div').text
+                if '연령 확인' in age_check:
+                    self.text.run('연령 확인이 필요한 상품명입니다. 다음으로 넘어갑니다.')
+                    self.text.run('상품명 : {}'.format(item_list[i]))
+                    self.category.loc[i, '상품제목'] = str(item_list[i])
+                    self.category.loc[i, '카테고리대분류'] = '없음'
+                    self.category.loc[i, '카테고리중분류'] = '없음'
+                    self.category.loc[i, '카테고리소분류'] = '없음'
+                    self.category.loc[i, '카테고리세분류'] = '없음'
+                    self.category.loc[i, '카테고리코드'] = '없음'
+                    
+                    ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+                    if ret == Result.FAIL:
+                        ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+
+                    self.text.run('{} : {} > {} > {} > {}'.format(item_list[i], self.category.loc[i, '카테고리대분류'], self.category.loc[i, '카테고리중분류'], 
+                                                                self.category.loc[i, '카테고리소분류'], self.category.loc[i, '카테고리세분류']))
+                    self.text.run('{} / {}개 분석 완료'.format(i + 1, len(item_list)))
+                    i += 1
+                    continue
+            except:                                                    
+                self.text.run('검색에 실패했습니다.')
+                self.ReOpenUrl()
+                cnt += 1
+                continue
+            
+            try:
+                no_result = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#container > div'))).text
+                if '없습니다.' in no_result:
+                    self.category.loc[i, '상품제목'] = str(item_list[i])
+                    self.category.loc[i, '카테고리대분류'] = '없음'
+                    self.category.loc[i, '카테고리중분류'] = '없음'
+                    self.category.loc[i, '카테고리소분류'] = '없음'
+                    self.category.loc[i, '카테고리세분류'] = '없음'
+                    self.category.loc[i, '카테고리코드'] = '없음'
+                    
+                    ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+                    if ret == Result.FAIL:
+                        ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+
+                    self.text.run('{} : {} > {} > {} > {}'.format(item_list[i], self.category.loc[i, '카테고리대분류'], self.category.loc[i, '카테고리중분류'], 
+                                                                self.category.loc[i, '카테고리소분류'], self.category.loc[i, '카테고리세분류']))
+                    self.text.run('{} / {}개 분석 완료'.format(i + 1, len(item_list)))
+                    i += 1
+                    continue
+            except:
+                no_result = self.driver.find_element(By.CSS_SELECTOR, '#container > div > div.noResultWithBestResults_no_result__FOoXE > div.noResultWithBestResults_no_keyword___Jhtn').text
+                if '없습니다.' in no_result:
+                    self.category.loc[i, '상품제목'] = str(item_list[i])
+                    self.category.loc[i, '카테고리대분류'] = '없음'
+                    self.category.loc[i, '카테고리중분류'] = '없음'
+                    self.category.loc[i, '카테고리소분류'] = '없음'
+                    self.category.loc[i, '카테고리세분류'] = '없음'
+                    self.category.loc[i, '카테고리코드'] = '없음'
+                    
+                    ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+                    if ret == Result.FAIL:
+                        ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+
+                    self.text.run('{} : {} > {} > {} > {}'.format(item_list[i], self.category.loc[i, '카테고리대분류'], self.category.loc[i, '카테고리중분류'], 
+                                                                self.category.loc[i, '카테고리소분류'], self.category.loc[i, '카테고리세분류']))
+                    self.text.run('{} / {}개 분석 완료'.format(i + 1, len(item_list)))
+                    i += 1
+                    continue
+                else:
+                    self.text.run('검색에 실패했습니다.')
+                    self.ReOpenUrl()
+                    cnt += 1
+                    continue
+            
+            time.sleep(self.process_delay)
+
+            # 스크롤바 내리기
+            ret = self.ScrollPageDown()
+            if ret == Result.FAIL:
+                self.text.run('웹페이지 로딩에 실패했습니다.')
+                self.ReOpenUrl()
+                cnt += 1
+                continue
+            
+            try:
+                # 카테고리 정보 수집
+                ii = 0
+                searched_list = self.driver.find_element(By.CSS_SELECTOR, '#container > div').get_attribute('innerHTML').split('product_item__MDtDF')[1:]
+                category_list = self.category_ref.iloc[:, 1:5].fillna('없음')
+                res_temp = pd.DataFrame()
+                for item in searched_list:
+                    splited_name = item.split('product_category__l4FWz product_nohover__Z0Muw')[1:]
+                    for k in range(len(splited_name)):
+                        splited_name[k] = splited_name[k].split('</span')[0].split('>')[1]
+                    try:
+                        idx = len(splited_name) - 1
+                        matched_name = category_list[category_list.iloc[:, idx] == splited_name[idx]]
+                        matched_idx = matched_name.index
+                    except:
+                        continue
+                    
+                    if matched_idx.empty != True:
+                        res_temp.loc[ii, '상품제목'] = str(item_list[i])
+                        res_temp.loc[ii, '카테고리대분류'] = str(self.category_ref.iloc[matched_idx, 1].values[0])
+                        res_temp.loc[ii, '카테고리중분류'] = str(self.category_ref.iloc[matched_idx, 2].values[0])
+                        res_temp.loc[ii, '카테고리소분류'] = str(self.category_ref.iloc[matched_idx, 3].values[0])
+                        res_temp.loc[ii, '카테고리세분류'] = str(self.category_ref.iloc[matched_idx, 4].values[0])
+                        res_temp.loc[ii, '카테고리코드'] = int(self.category_ref.iloc[matched_idx, 0].values[0])
+                        ii += 1
+
+                max_res_perc = int(res_temp['카테고리코드'].value_counts(normalize=True, sort=True).idxmax())
+                df_idx = self.category_ref[self.category_ref.iloc[:, 0] == max_res_perc].index
+                self.category.loc[i, '상품제목'] = str(item_list[i])
+                self.category.loc[i, '카테고리대분류'] = str(self.category_ref.iloc[df_idx, 1].values[0])
+                self.category.loc[i, '카테고리중분류'] = str(self.category_ref.iloc[df_idx, 2].values[0])
+                self.category.loc[i, '카테고리소분류'] = str(self.category_ref.iloc[df_idx, 3].values[0])
+                self.category.loc[i, '카테고리세분류'] = str(self.category_ref.iloc[df_idx, 4].values[0])
+                self.category.loc[i, '카테고리코드'] = str(self.category_ref.iloc[df_idx, 0].values[0])
+                
+                ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+                if ret == Result.FAIL:
+                    ret = self.SaveFileWithDataFrame(self.category, self.filename.split('/')[-1].split('.')[0], '네이버카테고리분석')
+
+                self.text.run('{} : {} > {} > {} > {}'.format(item_list[i], self.category.loc[i, '카테고리대분류'], self.category.loc[i, '카테고리중분류'], 
+                                                            self.category.loc[i, '카테고리소분류'], self.category.loc[i, '카테고리세분류']))
+                self.text.run('{} / {}개 분석 완료'.format(i + 1, len(item_list)))
+                i += 1
+            except:
+                self.text.run('카테고리 정보 수집 도중 에러가 발생됐습니다. 재시도합니다 {}'.format(cnt + 1))
+                self.ReOpenUrl()
+                cnt += 1
+                continue
+
+        # 크롤링 종료
+        end_time = self.text.GetTime()
+        diff_time = end_time - start_time
         self.text.run('--End work--')
         self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
         self.driver.close()
@@ -521,12 +689,12 @@ class MyWindow(QMainWindow, form_class):
         self.wb.save(filename)
         return ret
     
-    def SaveFileWithDataFrame(self, df, file_name):
+    def SaveFileWithDataFrame(self, df, file_name, key_name='상품명분석'):
         ret = Result.PASS
         now_time = self.text.GetTime().strftime('%y%m%d')
 
         file_folder = '{}\\Desktop\\키프리스_결과물\\상품명_분석'.format(self.windows_user_name)
-        filename = '{}\\{}'.format(file_folder, '{}_{}_상품명분석_Kipris_SearchResults.xlsx'.format(now_time, file_name))
+        filename = '{}\\{}'.format(file_folder, '{}_{}_{}_Kipris_SearchResults.xlsx'.format(now_time, file_name, key_name))
         try:
             if not os.path.isdir(file_folder):
                 os.mkdir(file_folder)
@@ -544,13 +712,13 @@ class MyWindow(QMainWindow, form_class):
         if self.filename != '':
             self.df = pd.read_excel(self.filename)
             self.df.fillna('', inplace=True)
-            self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1].replace('.xlsx','')))
+            self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1]))
         self.file_path_input.setText(self.filename)
     
-    def GetAnalysisFileName(self):
+    def GetFileName(self):
         root = tkinter.Tk()
         root.withdraw()
-        filename = askopenfilename(parent=root, filetypes=[('분석데이터 엑셀', '.xlsx')], initialdir=self.windows_user_name, title='연동할 분석 데이터 파일을 선택해주세요')
+        filename = askopenfilename(parent=root, filetypes=[('분석데이터 엑셀', '상품명분석_Kipris_SearchResults.xlsx')], initialdir='{}/키프리스_결과물/상품명_분석/'.format(self.windows_user_name), title='연동할 네이버 카테고리 분석 데이터 파일을 선택해주세요')
         self.text.run('파일 이름 : {}'.format(filename.split('/')[-1].replace('.xlsx','')))
 
         return filename
@@ -565,13 +733,18 @@ class MyWindow(QMainWindow, form_class):
     def AnalyzeBrandName(self):
         self.text.run('--Start to analyze--')
         start_time = self.text.GetTime()
-        self.target_brand_list = self.df.iloc[:, 15]
-        self.target_item_list = self.df.iloc[:, 0]
         self.splited_brand_list = []
         self.ratio = pd.DataFrame()
         idx = 0
         item_idx = 0
         ratio_cnt = 0
+
+        if len(self.category) == 0:
+            file_name = self.GetFileName()
+            self.category = pd.read_excel(file_name)
+            self.filename = file_name
+
+        self.target_brand_list = self.category.iloc[:, 0]
 
         for target in self.target_brand_list:
             splited_name = target.split(' ')
@@ -580,26 +753,21 @@ class MyWindow(QMainWindow, form_class):
 
         for t1 in self.splited_brand_list:
             splited_target = t1.split(' ')
+            item_name = ''
             for t2 in splited_target:
                 self.ratio.loc[idx, str('키워드명')] = t2
-                if self.item_name_generate == ItemNameGen.NAVER_API:
-                    ret, category1, category2 = self.MatchingCategory(t2)
-                    if ret != Result.PASS:
-                        self.text.run('네이버 API 사용량을 초과했습니다. 내일 다시 시도해주세요.')
-                        self.ratio = self.ratio.drop_duplicates(['키워드명'], keep='last', ignore_index = True)
-                        self.text.run('중복된 키워드를 제거하여 총 {}개의 키워드 분석이 완료되었습니다.'.format(len(self.ratio['키워드명'])))
-                        ret = self.SaveFileWithDataFrame(self.ratio, self.filename.split('/')[-1].split('.')[0])
-
-                        end_time = self.text.GetTime()
-                        diff_time = end_time - start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        return
-
-                    self.ratio.loc[idx, str('지정상품명')] = category2
+                if self.category.iloc[item_idx, 4] != '없음':
+                    item_name = self.category.iloc[item_idx, 4]
+                elif self.category.iloc[item_idx, 3] != '없음':
+                    item_name = self.category.iloc[item_idx, 3]
+                elif self.category.iloc[item_idx, 2] != '없음':
+                    item_name = self.category.iloc[item_idx, 2]
                 else:
-                    self.ratio.loc[idx, str('지정상품명')] = self.target_item_list[item_idx].split('-')[0]
-                
+                    self.text.run('{}번째 상품명 카테고리가 없습니다. 다음으로 넘어갑니다.'.format(idx))
+                    self.ratio.loc[idx, str('지정상품명')] = ''
+                    continue
+
+                self.ratio.loc[idx, str('지정상품명')] = self.target_item_list[item_idx].split('-')[0]
                 for t3 in self.splited_brand_list:
                     if t2 in t3:
                         ratio_cnt += 1
@@ -680,6 +848,46 @@ class MyWindow(QMainWindow, form_class):
             category2 = ''
 
         return ret, category1, category2
+
+    def ScrollPageDown(self):
+        try:
+            # 페이지 스크롤 최대치로 내리기
+            before_h = self.driver.execute_script('return window.scrollY')
+            while(True):
+                self.driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
+                time.sleep(0.3)
+                after_h = self.driver.execute_script('return window.scrollY')
+
+                if after_h == before_h:
+                    break
+                else:
+                    before_h = after_h
+        except:
+            return Result.FAIL
+        
+        return Result.PASS
+
+    def MakeRequestAndGetResponse(self, number, headers, target_word) :
+        pageingIndex = number
+        params = {
+            'sort':'review',
+            'pagingIndex': pageingIndex,
+            'pagingSize': 80,
+            'viewType': 'list',
+            'productSet': 'overseas',
+            'deliveryFee': '',
+            'deliveryTypeValue': '',
+            'frm': 'NVSHPRC',
+            'query': target_word,
+            'iq': '',
+            'eq': '',
+            'xq': '',
+            'minPrice': '',
+            'maxPrice': '',
+        }
+        response = requests.get('https://search.shopping.naver.com/api/search/all', headers=headers, params=params)
+
+        return response
 
     # 쓰레드 종료
     def KillThread(self):
