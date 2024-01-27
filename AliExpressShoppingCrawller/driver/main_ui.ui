@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>835</width>
-    <height>789</height>
+    <width>635</width>
+    <height>780</height>
    </rect>
   </property>
   <property name="font">
@@ -17,7 +17,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>AliExpress Web crawller v24011001</string>
+   <string>AliExpress Web crawller v24012602</string>
   </property>
   <property name="toolTipDuration">
    <number>-2</number>
@@ -419,7 +419,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>835</width>
+     <width>635</width>
      <height>21</height>
     </rect>
    </property>

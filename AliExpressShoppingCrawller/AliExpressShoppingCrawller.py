@@ -261,7 +261,7 @@ class MyWindow(QMainWindow, form_class):
     # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : v24011001')
+        self.text.run('PGM ver : v24012602')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -666,6 +666,7 @@ class MyWindow(QMainWindow, form_class):
         return Result.PASS
 
     def CrawlData(self):
+        self.today = datetime.datetime.now()
         if self.cnt == 5:
             self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
             self.text.run('크롤링이 완료되었습니다.')
@@ -1105,7 +1106,7 @@ class MyWindow(QMainWindow, form_class):
         try:
             is_delivery = self.product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
             if is_delivery != -1:
-                self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.text.run('{}페이지 {}번째 상품은 국내로 배송이 불가능합니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
                     if (self.i + 1) == self.page_max_num:
@@ -1408,6 +1409,9 @@ class MyWindow(QMainWindow, form_class):
 
             return Result.FAIL
 
+        # 예상 배송일
+        self.eta = self.GetEta()
+
         # 판매자상품코드
         self.sku = self.GetSkuId()
         if self.no_crawl == True:
@@ -1522,7 +1526,7 @@ class MyWindow(QMainWindow, form_class):
             price_final = '{}-{}'.format(min(prices), max(prices))
         else:
             price_final = self.price
-        self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url, 
+        self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url, 
                            select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
         self.SaveFile()
         self.CloseItemPage()
@@ -1764,6 +1768,46 @@ class MyWindow(QMainWindow, form_class):
             return Result.FAIL, '', ''
 
         return ret, delivery_for, delivery_fee
+    
+    def GetEta(self):
+        ret = Result.PASS
+        try:
+            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(2)').text
+            time = temp.split('으로 ')[1].split(' 도착')[0].replace(' ', '').split(',')[0]
+        except:
+            try:
+                temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(2)').text
+                time = temp.split('배송 날짜:')[1].split('-')[1].replace(' ', '').replace('일', '')
+                return float(time)
+            except:
+                try:
+                    temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(2)').text
+                    time = temp.split('일정: ')[1].split(' - ')[0].replace(' ', '').split(',')[0]
+                except:
+                    try:
+                        temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                        time = temp.split('배송일: ')[1].replace(' ', '').split(',')[0]
+                    except:
+                        try:
+                            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                            time = temp.split(' 배송 예정')[0].replace(' ', '').split(',')[0]
+                        except:
+                            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div.dynamic-shipping-line.dynamic-shipping-contentLayout').text
+                            time = temp.split(' 배송 예정')[0].replace(' ', '').split(',')[0]
+
+        try:
+            time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+        except:
+            try:
+                time = temp.split('예상 배송 일정: ')[1].split(' - ')[0].replace(' ', '').split(',')[0]
+            except:
+                temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
+                time = temp.split(' 배송 예정 ')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+            time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+
+        eta = time_str - self.today
+
+        return eta.days + 1
 
     def GetReview(self):
         review = ''
@@ -2406,11 +2450,9 @@ class MyWindow(QMainWindow, form_class):
                                     
                         if '0' == limit:
                             self.text.run('{}페이지 {}-{}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1, j + 1))
-                            del option2_list[j - del_idx_opt2]
-                            del_idx_opt2 += 1
                             soldout_cnt += 1
                             continue
-
+                        
                         price = ''
                         price_ori = ''
 
@@ -2437,7 +2479,17 @@ class MyWindow(QMainWindow, form_class):
                             else:
                                 prices.append(float(price.replace(',','')))
 
-                        option1_total.append(option1_list[i - del_idx_opt1].split(';')[0] + ' + ' + option2_list[j - del_idx_opt2].split(';')[0] + '/' + str(prices[j - del_idx_opt2]))
+                        # Check if it could not delivery to Korea
+                        try:
+                            is_delivery = product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
+                            if is_delivery != -1:
+                                self.text.run('{}페이지 {}-{}-{} 상품은 국내로 배송이 불가능합니다.'.format(self.i + 1, self.j + 1, i + 1, j + 1))
+                                soldout_cnt += 1
+                                continue
+                        except:
+                            pass
+
+                        option1_total.append(option1_list[i].split(';')[0] + ' + ' + option2_list[j].split(';')[0] + '/' + str(prices[j]))
                         if j != 0 and pre_price != price and pre_price != '':
                             self.text.run('옵션2에 따라 가격 변동이 있는 상품입니다. 다음 아이템으로 넘어갑니다.')
                             self.no_crawl = True
@@ -2474,8 +2526,6 @@ class MyWindow(QMainWindow, form_class):
                                         limit = ''
                     if '0' == limit:
                         self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                        del option1_list[i - del_idx_opt1]
-                        del_idx_opt1 += 1
                         soldout_cnt += 1
                         continue
 
@@ -2514,12 +2564,20 @@ class MyWindow(QMainWindow, form_class):
                             prices.append(float(price_ori.replace(',','')))
                         else:
                             prices.append(float(price.replace(',','')))
+                    
+                    # Check if it could not delivery to Korea
+                    try:
+                        is_delivery = product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
+                        if is_delivery != -1:
+                            self.text.run('{}페이지 {}-{}-{} 상품은 국내로 배송이 불가능합니다.'.format(self.i + 1, self.j + 1, i + 1, j + 1))
+                            soldout_cnt += 1
+                            continue
+                    except:
+                        pass
 
-                    option1_total.append(option1_list[i - del_idx_opt1].split(';')[0] + '/' + str(prices[i - del_idx_opt1]))
+                    option1_total.append(option1_list[i].split(';')[0] + '/' + str(prices[i]))
             except:
                 self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
-                del option1_list[i - del_idx_opt1]
-                del_idx_opt1 += 1
                 soldout_cnt += 1
                 continue
 
@@ -2545,8 +2603,46 @@ class MyWindow(QMainWindow, form_class):
             option1_total = []
             option2_list = []
             prices = []
+        
+        option1_temp = []
+        option2_temp = []
+        price_final = []
+        option1 = []
+        option2 = []
+        if len(option2_list) != 0:
+            for i in range(len(option1_total)):
+                option1_name = option1_total[i].split(' + ')[0]
+                option2_name = option1_total[i].split(' + ')[1].split('/')[0]
+                option1_img = [s for s in option1_list if option1_name in s]
+                if len(option1_img) > 1:
+                    for j in range(len(option1_img)):
+                        option1_name_temp = option1_img[j].split(';')[0]
+                        if option1_name_temp == option1_name:
+                            option1_img_name = option1_img[j].split(';')[1]
+                else:
+                    option1_img_name = option1_img[0].split(';')[1]
+                option1_temp.append('{};{}'.format(option1_name, option1_img_name))
+                option2_temp.append('{};'.format(option2_name))
 
-        return option1_total, option1_list, option2_list, prices
+                price_final.append(float(option1_total[i].split('/')[-1]))
+            option2 = list(dict.fromkeys(option2_temp))
+        else:
+            for i in range(len(option1_total)):
+                option1_name = option1_total[i].split('/')[0]
+                option1_img = [s for s in option1_list if option1_name in s]
+                if len(option1_img) > 1:
+                    for j in range(len(option1_img)):
+                        option1_name_temp = option1_img[j].split(';')[0]
+                        if option1_name_temp == option1_name:
+                            option1_img_name = option1_img[j].split(';')[1]
+                else:
+                    option1_img_name = option1_img[0].split(';')[1]
+                option1_temp.append('{};{}'.format(option1_name, option1_img_name))
+                price_final.append(float(option1_total[i].split('/')[1]))
+
+        option1 = list(dict.fromkeys(option1_temp))
+
+        return option1_total, option1, option2, price_final
 
     def GetDetailImages(self):
         detail_imgs = []
@@ -2808,7 +2904,7 @@ class MyWindow(QMainWindow, form_class):
         try:
             is_delivery = self.product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
             if is_delivery != -1:
-                self.text.run('{}페이지 {}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.text.run('{}페이지 {}번째 상품은 국내로 배송이 불가능합니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
                 self.CloseItemPage()
                 if self.j == 59 and (self.extra == 0 or self.extra == 1):
                     if (self.i + 1) == self.page_max_num:
@@ -3031,6 +3127,9 @@ class MyWindow(QMainWindow, form_class):
 
                 return Result.FAIL
 
+            # 예상 배송일
+            self.eta = self.GetEta()
+
             # 판매자상품코드
             self.sku = self.GetSkuId()
             if self.no_crawl == True:
@@ -3120,7 +3219,7 @@ class MyWindow(QMainWindow, form_class):
                 price_final = '{}-{}'.format(min(prices), max(prices))
             else:
                 price_final = self.price
-            self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '','','','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url, 
+            self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url,
                     select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
             self.SaveFile('_reproduction')
             self.CloseItemPage()
@@ -3152,11 +3251,11 @@ class MyWindow(QMainWindow, form_class):
                 row_num = int(self.cnt_page * 60 / 6)
                 for i in range(row_num):
                     self.driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
-                    time.sleep(2)
+                    time.sleep(0.3)
             else:
                 while(True):
                     self.driver.find_element(By.CSS_SELECTOR, 'body').send_keys(Keys.END)
-                    time.sleep(1)
+                    time.sleep(0.3)
                     after_h = self.driver.execute_script('return window.scrollY')
 
                     if after_h == before_h:
@@ -3229,7 +3328,7 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(1)
             pag.moveTo(target_x + 10, target_y - 5)
             time.sleep(1)
-            pag.dragTo(target_x + 500.1911, target_y - 5, duration=random.uniform(0.67801, 0.79999), button='left')
+            pag.dragTo(target_x + 500.1911, target_y - 58.4718, duration=0.8, button='left')
             time.sleep(2)
             self.driver.execute_script("window.scrollTo(0, 0)")
             time.sleep(1)
