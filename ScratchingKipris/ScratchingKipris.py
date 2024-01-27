@@ -55,6 +55,10 @@ class Available(Enum):
     DISABLE = 0
     ENABLE = 1
 
+class NameLen(Enum):
+    ALL = 0
+    HALF = 1
+
 # QT designer ui 파일 로드
 form_class = uic.loadUiType("./driver/main_ui.ui")[0]
 
@@ -95,8 +99,9 @@ class MyWindow(QMainWindow, form_class):
         self.ratio = pd.DataFrame()
         self.translator = google.Translator()
         self.url_link = ''
-        self.pgm_ver = 'v24012002'
+        self.pgm_ver = 'v24012702'
         self.category = pd.DataFrame()
+        self.len_name = NameLen.ALL
 
         self.text.finished.connect(self.ConnectTextBrowser) # TextBrowser한테서 signal 받으면 ConnectTextBrowser 함수 실행
         self.exit_btn.clicked.connect(self.QuitProgram) # 종료 버튼 클릭하면 프로그램 종료되게끔 설정 & thread 종료
@@ -107,6 +112,10 @@ class MyWindow(QMainWindow, form_class):
 
         # Set File path to analyze brand name
         self.set_file_path_btn.clicked.connect(self.SetFilePath)
+
+        # Set length of Brand name analysis
+        self.all_names_analyze_radio.clicked.connect(self.SetBrandNameLength)
+        self.half_names_analyze_radio.clicked.connect(self.SetBrandNameLength)
 
         # Analyze brand name
         self.start_analyze_btn.clicked.connect(self.RunAnalyzeBrandName)
@@ -672,6 +681,12 @@ class MyWindow(QMainWindow, form_class):
                 self.admin_7_btn.toggle()
             if self.admin_8_btn.isChecked() == True:
                 self.admin_8_btn.toggle()
+    
+    def SetBrandNameLength(self):
+        if self.half_names_analyze_radio.isChecked():
+            self.len_name = NameLen.HALF
+        else:
+            self.len_name = NameLen.ALL
 
     def SaveFile(self, suffix = ''):
         ret = Result.PASS
@@ -718,7 +733,7 @@ class MyWindow(QMainWindow, form_class):
     def GetFileName(self):
         root = tkinter.Tk()
         root.withdraw()
-        filename = askopenfilename(parent=root, filetypes=[('분석데이터 엑셀', '상품명분석_Kipris_SearchResults.xlsx')], initialdir='{}/키프리스_결과물/상품명_분석/'.format(self.windows_user_name), title='연동할 네이버 카테고리 분석 데이터 파일을 선택해주세요')
+        filename = askopenfilename(parent=root, filetypes=[('분석데이터 엑셀', '네이버카테고리분석_Kipris_SearchResults.xlsx')], initialdir='{}/키프리스_결과물/상품명_분석/'.format(self.windows_user_name), title='연동할 네이버 카테고리 분석 데이터 파일을 선택해주세요')
         self.text.run('파일 이름 : {}'.format(filename.split('/')[-1].replace('.xlsx','')))
 
         return filename
@@ -742,14 +757,17 @@ class MyWindow(QMainWindow, form_class):
         if len(self.category) == 0:
             file_name = self.GetFileName()
             self.category = pd.read_excel(file_name)
-            self.filename = file_name
+            self.filename = file_name.split('/')[-1].split('_')[1]
 
         self.target_brand_list = self.category.iloc[:, 0]
 
         for target in self.target_brand_list:
             splited_name = target.split(' ')
             len_splited = len(splited_name)
-            self.splited_brand_list.append(' '.join(splited_name[0:round(len_splited / 2)]))
+            if self.len_name == NameLen.HALF:
+                self.splited_brand_list.append(' '.join(splited_name[0:round(len_splited / 2)]))
+            else:
+                self.splited_brand_list.append(' '.join(splited_name))
 
         for t1 in self.splited_brand_list:
             splited_target = t1.split(' ')
@@ -757,17 +775,17 @@ class MyWindow(QMainWindow, form_class):
             for t2 in splited_target:
                 self.ratio.loc[idx, str('키워드명')] = t2
                 if self.category.iloc[item_idx, 4] != '없음':
-                    item_name = self.category.iloc[item_idx, 4]
+                    item_name = self.category.iloc[item_idx, 4].split('/')[-1]
                 elif self.category.iloc[item_idx, 3] != '없음':
-                    item_name = self.category.iloc[item_idx, 3]
+                    item_name = self.category.iloc[item_idx, 3].split('/')[-1]
                 elif self.category.iloc[item_idx, 2] != '없음':
-                    item_name = self.category.iloc[item_idx, 2]
+                    item_name = self.category.iloc[item_idx, 2].split('/')[-1]
                 else:
                     self.text.run('{}번째 상품명 카테고리가 없습니다. 다음으로 넘어갑니다.'.format(idx))
                     self.ratio.loc[idx, str('지정상품명')] = ''
                     continue
 
-                self.ratio.loc[idx, str('지정상품명')] = self.target_item_list[item_idx].split('-')[0]
+                self.ratio.loc[idx, str('지정상품명')] = item_name
                 for t3 in self.splited_brand_list:
                     if t2 in t3:
                         ratio_cnt += 1
