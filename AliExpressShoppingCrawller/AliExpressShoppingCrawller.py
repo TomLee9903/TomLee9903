@@ -102,7 +102,7 @@ class MyWindow(QMainWindow, form_class):
         self.link_parse = False
         self.detail_db = []
         self.item_text = ''
-        self.enable_option2 = False
+        self.enable_option2 = True
         self.dc_per = 100.0
         self.enable_crawl_price_only = False
         self.enable_continuous_crawl = False
@@ -261,7 +261,7 @@ class MyWindow(QMainWindow, form_class):
     # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : v24012602')
+        self.text.run('PGM ver : v24012804')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -667,7 +667,7 @@ class MyWindow(QMainWindow, form_class):
 
     def CrawlData(self):
         self.today = datetime.datetime.now()
-        if self.cnt == 5:
+        if self.cnt == 100:
             self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
             self.text.run('크롤링이 완료되었습니다.')
             self.j = 0
@@ -1410,7 +1410,51 @@ class MyWindow(QMainWindow, form_class):
             return Result.FAIL
 
         # 예상 배송일
-        self.eta = self.GetEta()
+        ret, self.eta = self.GetEta()
+        if ret == Result.FAIL:
+            self.text.run('{}페이지 {}번째 아이템의 예상 배송일을 가져올 수 없습니다. 다음으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+            self.CloseItemPage()
+            if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                if (self.i + 1) == self.page_max_num:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                elif (self.i + 1) == self.max_page:
+                    self.final_cnt += 1
+                    if (self.extra == 0 or self.extra == 1):
+                        self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                    self.text.run('마지막 아이템입니다.')
+                    self.text.run('크롤링이 완료되었습니다.')
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                    # 크롬드라이버 종료
+                    self.end_time = self.text.GetTime()
+                    diff_time = self.end_time - self.start_time
+                    self.text.run('--End work--')
+                    self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                    self.restart = True
+
+                    return Result.PASS
+                else:
+                    self.ClickNextPage()
+                    self.j = 0
+                    self.i += 1
+                    time.sleep(self.process_delay)
+            else:
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+
+            return Result.FAIL
 
         # 판매자상품코드
         self.sku = self.GetSkuId()
@@ -1777,37 +1821,69 @@ class MyWindow(QMainWindow, form_class):
         except:
             try:
                 temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(2)').text
-                time = temp.split('배송 날짜:')[1].split('-')[1].replace(' ', '').replace('일', '')
-                return float(time)
+                time = temp.split(' 배송 예정')[0].split('에서')[0].replace(' ', '').split(',')[0]
+                if '월' not in time and '일' not in time:
+                    temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                    try:
+                        time = temp.split('배송일: ')[1].split('에서')[0].replace(' ', '').split(',')[0]
+                    except:
+                        time = temp.split('일정: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
             except:
                 try:
                     temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(2)').text
-                    time = temp.split('일정: ')[1].split(' - ')[0].replace(' ', '').split(',')[0]
+                    time = temp.split('배송 날짜:')[1].split('에서')[0].split('-')[1].replace(' ', '').replace('일', '')
+                    return float(time)
                 except:
                     try:
-                        temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
-                        time = temp.split('배송일: ')[1].replace(' ', '').split(',')[0]
+                        temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(2)').text
+                        time = temp.split('일정: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
                     except:
                         try:
                             temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
-                            time = temp.split(' 배송 예정')[0].replace(' ', '').split(',')[0]
+                            time = temp.split('배송일: ')[1].split('에서')[0].replace(' ', '').split(',')[0]
                         except:
-                            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div.dynamic-shipping-line.dynamic-shipping-contentLayout').text
-                            time = temp.split(' 배송 예정')[0].replace(' ', '').split(',')[0]
+                            try:
+                                temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                                try:
+                                    time = temp.split(' 배송 예정')[0].split('에서')[0].split('배송 일정: ')[1].split(' - ')[0].replace(' ', '').split(',')[0]
+                                except:
+                                    time = temp.split(' 배송 예정')[0].split('에서')[0].replace(' ', '').split(',')[0]
+                            except:
+                                try:
+                                    temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div.dynamic-shipping-line.dynamic-shipping-contentLayout').text
+                                    time = temp.split(' 배송 예정')[0].split('에서')[0].split('배송 일정: ')[1].split(' - ')[0].replace(' ', '').split(',')[0]
+                                except:
+                                    return Result.FAIL, 0
 
         try:
             time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
         except:
             try:
-                time = temp.split('예상 배송 일정: ')[1].split(' - ')[0].replace(' ', '').split(',')[0]
+                time = temp.split('예상 배송 일정: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
             except:
-                temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
-                time = temp.split(' 배송 예정 ')[0].split(' - ')[0].replace(' ', '').split(',')[0]
-            time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+                try:
+                    temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
+                    time = temp.split(' 배송 예정 ')[0].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                    time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+                except:
+                    try:
+                        temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
+                        time = temp.split('배송일: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                        time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+                    except:
+                        try:
+                            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                            time = temp.split('배송일: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                            time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+                        except:
+                            return Result.FAIL, 0
+        try:
+            eta = time_str - self.today
+        except:
+            return Result.FAIL, 0
 
-        eta = time_str - self.today
-
-        return eta.days + 1
+        return ret, eta.days + 1
 
     def GetReview(self):
         review = ''
@@ -2582,7 +2658,10 @@ class MyWindow(QMainWindow, form_class):
                 continue
 
         if len(prices) != 0 and len(prices) > 1:
-            max_price = abs(max(prices) - min(prices)) / min(prices) * 100                
+            if max(prices) == 0.0 and min(prices) == 0.0:
+                max_price = 0.0
+            else:
+                max_price = abs(max(prices) - min(prices)) / min(prices) * 100
             if max_price >= 300.0:
                 self.text.run('{}페이지 {}번째 아이템의 옵션가격이 본품 금액의 300% 이상입니다. 다음 아이템으로 넘어갑니다'.format(self.i + 1, self.j + 1))
                 option1_list = []
@@ -2590,7 +2669,7 @@ class MyWindow(QMainWindow, form_class):
                 prices = []
                 self.no_crawl = True
 
-            elif min(prices) <= self.price / 2:
+            elif min(prices) <= self.price / 2 and max_price != 0.0:
                 self.text.run('{}페이지 {}번째 아이템의 옵션가격이 본품 금액의 -50% 이하입니다. 다음 아이템으로 넘어갑니다'.format(self.i + 1, self.j + 1))
                 option1_list = []
                 option1_total = []
@@ -3128,7 +3207,51 @@ class MyWindow(QMainWindow, form_class):
                 return Result.FAIL
 
             # 예상 배송일
-            self.eta = self.GetEta()
+            ret, self.eta = self.GetEta()
+            if ret == Result.FAIL:
+                self.text.run('{}페이지 {}번째 아이템의 예상 배송일을 가져올 수 없습니다. 다음으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.CloseItemPage()
+                if self.j == 59 and (self.extra == 0 or self.extra == 1):
+                    if (self.i + 1) == self.page_max_num:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    elif (self.i + 1) == self.max_page:
+                        self.final_cnt += 1
+                        if (self.extra == 0 or self.extra == 1):
+                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
+                        self.text.run('마지막 아이템입니다.')
+                        self.text.run('크롤링이 완료되었습니다.')
+                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                        # 크롬드라이버 종료
+                        self.end_time = self.text.GetTime()
+                        diff_time = self.end_time - self.start_time
+                        self.text.run('--End work--')
+                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
+                        self.restart = True
+
+                        return Result.PASS
+                    else:
+                        self.ClickNextPage()
+                        self.j = 0
+                        self.i += 1
+                        time.sleep(self.process_delay)
+                else:
+                    self.j += 1
+                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+
+                return Result.FAIL
 
             # 판매자상품코드
             self.sku = self.GetSkuId()

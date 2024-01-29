@@ -17,7 +17,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>AliExpress Web crawller v24012602</string>
+   <string>AliExpress Web crawller v24012804</string>
   </property>
   <property name="toolTipDuration">
    <number>-2</number>
@@ -215,6 +215,9 @@
           <widget class="QCheckBox" name="enable_option2_btn">
            <property name="text">
             <string>옵션2 상품 소싱 활성화</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
