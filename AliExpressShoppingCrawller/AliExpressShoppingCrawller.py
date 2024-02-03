@@ -253,7 +253,7 @@ class MyWindow(QMainWindow, form_class):
     # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : 23121507')
+        self.text.run('PGM ver : 24020308')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -400,28 +400,32 @@ class MyWindow(QMainWindow, form_class):
             self.item_text = search_item
 
         if self.enable_continuous_crawl == True:
+            # 무료 배송
             free_deliever = '무료 배송'
             click_category = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.refine2023--refine--3SE-006'))).text.split('\n')
             try:
-                correct_idx = [i for i in range(len(click_category)) if free_deliever in click_category[i]][0]
+                free_deliever_idx = [i for i in range(len(click_category)) if free_deliever in click_category[i]][0]
+                try:
+                    WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.refine2023--refine--3SE-006 > div:nth-child(1) > div.collSelect--content--35jau6_ > span > span:nth-child({})'.format(free_deliever_idx)))).click()
+                    time.sleep(5)
+                except:
+                    self.text.run('{}을 클릭하지 못했습니다.'.format(free_deliever))
+                    pass    
             except:
                 self.text.run('{}을 클릭하지 못했습니다.'.format(free_deliever))
                 pass
             
-            # 무료 배송
-            try:
-                WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.refine2023--refine--3SE-006 > div:nth-child(1) > div.collSelect--content--35jau6_ > span > span:nth-child({})'.format(correct_idx)))).click()
-                time.sleep(5)
-            except:
-                self.text.run('{}을 클릭하지 못했습니다.'.format(free_deliever))
-                pass
             # 별점 네개 이상
             try:
                 WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.refine2023--refine--3SE-006 > div:nth-child(5) > div.collSelect--content--35jau6_ > span > span'))).click()
                 time.sleep(5)
             except:
-                self.text.run('별점 네개 이상을 클릭하지 못했습니다.')
-                pass
+                try:
+                    WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#root > div.root--container--2gVZ5S0.root--newRoot--2-6FirH.search-root-cls > div > div.refine2023--refine--3SE-006 > div:nth-child(6) > div.collSelect--content--35jau6_ > span > span'))).click()
+                    time.sleep(5)
+                except:
+                    self.text.run('별점 네개 이상을 클릭하지 못했습니다.')
+                    pass
 
         ret = self.InitializeSettingOnPage()
         if ret == Result.FAIL:
