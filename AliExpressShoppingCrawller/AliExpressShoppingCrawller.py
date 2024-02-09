@@ -107,7 +107,7 @@ class MyWindow(QMainWindow, form_class):
         self.product_main_css = '#root'
         self.restart = False
         self.enable_simple_data = False
-        self.pgm_ver = 'v24020909'
+        self.pgm_ver = 'v24020910'
         self.filename = ''
         self.windows_user_name = os.path.expanduser('~')
         #self.silent_mode = True
@@ -2911,7 +2911,7 @@ class MyWindow(QMainWindow, form_class):
                 break
             # 상품명 검색
             try:
-                self.driver.get('https://search.shopping.naver.com/search/all?query={}&pagingSize=80'.format(item_list[i]))
+                self.driver.get('https://search.shopping.naver.com/search/all?query={}&pagingSize=80&productSet=overseas'.format(item_list[i]))
                 time.sleep(1)
                 age_check = self.driver.find_element(By.CSS_SELECTOR, '#container > div').text
                 if '연령 확인' in age_check:
