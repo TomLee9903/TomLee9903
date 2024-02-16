@@ -1,0 +1,17 @@
+{
+    "userinfo" : {
+        "smartstoreauth": "rodpltd007@gmail.com:wjdgns*0817",
+        "gmarketauth": "rodp007:wjdgns**0817",
+        "auctionauth": "rodp007:wjdgns**0817",
+        "elevenauth": "",
+        "interparkauth": "",
+        "coupangauth": ""
+    },
+    "papagoauth" : {
+        "PAPAGO_CLIENTID" : "5qadc2t24m",
+        "PAPAGO_CLIENTSECRET" : "E9uFYOkKGyq5tRCDOPPDAsAoNGqoesSYSwZ1W5rh"
+    },
+    "margin": 1.25,
+    "pcuser": "ali2",
+    "chunksize": 25
+}
