@@ -8,31 +8,12 @@ import uploadermanager
 import json
 import openpyxl
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-import os
-
-options = webdriver.ChromeOptions() 
-options.add_argument('disable-notifications')
-options.add_argument("--disable-blink-features=AutomationControlled") 
-options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
-options.add_experimental_option("useAutomationExtension", False) 
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
-
 class aliitem:
     def __init__(self, code, title,tag, navercategory):
         self.code = code
         self.title = title
         self.tag = tag
         self.navercategory = navercategory
-
-accinfo = json.load(open("accinfo.json"))
-
 
 def get_cookies_string(driver):
     cookiels = []
@@ -41,8 +22,13 @@ def get_cookies_string(driver):
             cookie["value"] = 'site=kor&province=919800080000000000&city=919800080008000000&c_tp=USD&region=KR&b_locale=ko_KR'
         cookiels.append(cookie["name"] + "=" + cookie["value"])
     return "; ".join(cookiels)
+    
+def chunklist(l,n):
+    for i in range(0,len(l),n):
+        yield l[i:i+n]
 
-driver.get("https://best.aliexpress.com/")
+accinfo = json.load(open("accinfo.json"))
+driver = uploadermanager.GetDriver()
 print("Please login to Aliexpress and press enter")
 input()
 
@@ -63,11 +49,6 @@ for row in sheet.iter_rows(min_row=2):
         alilink = alilink.split('.html')[0].split('/')[-1]
     
     aliitems.append(aliitem(alilink, aliname, alitag, navercategory))
-    
-        
-def chunklist(l,n):
-    for i in range(0,len(l),n):
-        yield l[i:i+n]
         
 completed = [line.strip() for line in open('completed.txt', 'r').readlines() if line.strip() != '']
     

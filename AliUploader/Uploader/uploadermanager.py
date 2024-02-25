@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
 import sys
@@ -19,16 +19,48 @@ import htmlgen
 import os
 import json
 import copy
+import subprocess
+import time
+import pyautogui
 
 userinfo = json.load(open("accinfo.json"))["userinfo"]
 
-options = webdriver.ChromeOptions() 
+# 디버거 크롬 구동
+try:
+    subprocess.Popen(r'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9225 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+except:
+    subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9225 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
+options = webdriver.ChromeOptions()
+user_agent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.83 Safari/537.36"
+options.add_argument('user-agent=' + user_agent)
+options.add_experimental_option("debuggerAddress", "127.0.0.1:9225")
+
+# 크롬 버전을 확인하여 버전이 안맞으면 자동으로 업데이트 하여 설치해주는 옵션       
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver.implicitly_wait(10)
+print("Please select google Chrome user and press enter")
+input()
+
+# 속도 향상을 위한 옵션 해제
 options.add_argument('disable-notifications')
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
+options.add_experimental_option("useAutomationExtension", False) 
+options.add_argument("disable-gpu") 
+options.add_argument("disable-infobars")
+options.add_argument("--disable-extensions")
+prefs = {'profile.default_content_setting_values': {'cookies' : 2, 'images': 2, 'plugins' : 2, 'popups': 2, 'geolocation': 2, 'notifications' : 2, 'auto_select_certificate': 2, 'fullscreen' : 2, 'mouselock' : 2, 'mixed_script': 2, 'media_stream' : 2, 'media_stream_mic' : 2, 'media_stream_camera': 2, 'protocol_handlers' : 2, 'ppapi_broker' : 2, 'automatic_downloads': 2, 'midi_sysex' : 2, 'push_messaging' : 2, 'ssl_cert_decisions': 2, 'metro_switch_to_desktop' : 2, 'protected_media_identifier': 2, 'app_banner': 2, 'site_engagement' : 2, 'durable_storage' : 2}}   
+#self.options.add_experimental_option('prefs', prefs)
+# 크롬 브라우저와 셀레니움을 사용하면서 발생되는 '시스템에 부착된 장치가 작동하지 않습니다.' 라는 크롬 브라우저의 버그를 조치하기 위한 코드. 
+options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
-current_script_directory = os.path.dirname(os.path.abspath(__file__))
-chromedriver_path = os.path.join(current_script_directory, "chromedriver.exe")
-
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+# 윈도우 사이즈 맥스로 키우기
+driver.maximize_window()
+driver.get("https://best.aliexpress.com/")
+time.sleep(1)
+pyautogui.press('f12')
+time.sleep(2)
+pyautogui.press('f12')
 
 def get_cookies_string(driver):
     cookiels = []
@@ -45,10 +77,26 @@ def eleven_login():
     if "view" in driver.current_url:
         pass
     else:
-        driver.find_element(By.ID, "loginName").send_keys(userinfo["elevenauth"].split(":")[0])
-        driver.find_element(By.ID, "passWord").send_keys(userinfo["elevenauth"].split(":")[1])
-        driver.find_element(By.ID, "loginbutton").click()
-    
+        id = userinfo["elevenauth"].split(":")[0]
+        pw = userinfo["elevenauth"].split(":")[1]
+
+        driver.find_element(By.CSS_SELECTOR, "#loginName").clear()
+        time.sleep(1)
+        driver.find_element(By.CSS_SELECTOR, "#loginName").clear()
+        time.sleep(1)
+
+        driver.find_element(By.CSS_SELECTOR, "#loginName").send_keys(id)
+        time.sleep(1)
+        print(userinfo["elevenauth"].split(":")[0])
+        driver.find_element(By.CSS_SELECTOR, "#passWord").clear()
+        time.sleep(1)
+        driver.find_element(By.CSS_SELECTOR, "#passWord").send_keys(pw)
+        time.sleep(1)
+        print(userinfo["elevenauth"].split(":")[1])
+        driver.find_element(By.CSS_SELECTOR, "#loginbutton").send_keys(Keys.ENTER)
+        time.sleep(5)
+        print('Success to log-in at 11st seller office!')
+        
     return get_cookies_string(driver)
 
 #Smartstore 로그인
@@ -186,4 +234,5 @@ def uploaditem(pi_items_dup):
             elevencode = elevenuploader.product_upload(pi_item,elevencookie)
             print("11번가 Uploaded: ",elevencode)
     
-    
+def GetDriver():
+    return driver
