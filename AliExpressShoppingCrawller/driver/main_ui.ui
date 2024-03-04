@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>765</width>
-    <height>780</height>
+    <width>618</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="font">
@@ -354,8 +354,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>765</width>
-     <height>31</height>
+     <width>618</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>
