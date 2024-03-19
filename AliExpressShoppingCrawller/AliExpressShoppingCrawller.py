@@ -108,8 +108,8 @@ class MyWindow(QMainWindow, form_class):
         self.enable_continuous_crawl = False
         self.search_item_list = pd.DataFrame()
         self.debug_mode = False
-        self.new_format = False
-        self.product_main_css = ''
+        self.new_format = True
+        self.product_main_css = '#root'
         self.restart = False
         #self.silent_mode = True
 		
@@ -129,6 +129,7 @@ class MyWindow(QMainWindow, form_class):
         self.free_radio.clicked.connect(self.SetExtraDataCollection)
         self.quick_delivery_radio.clicked.connect(self.SetExtraDataCollection)
         self.recom_radio.clicked.connect(self.SetExtraDataCollection)
+        self.soldout_radio.clicked.connect(self.SetExtraDataCollection)
         self.enable_translate_itemname.clicked.connect(self.SetTranslateItemName)
         self.enable_discount.clicked.connect(self.SetPriceType)
         self.enable_link_sourcing.clicked.connect(self.SetLinkSourcing)
@@ -218,6 +219,8 @@ class MyWindow(QMainWindow, form_class):
             self.extra = 5
         elif self.recom_radio.isChecked():
             self.extra = 6
+        elif self.soldout_radio.isChecked():
+            self.extra = 7
 
     def SetLinkSourcing(self):
         if self.enable_link_sourcing.isChecked():
@@ -251,17 +254,17 @@ class MyWindow(QMainWindow, form_class):
         self.search_item_list = pd.read_excel('./driver/SearchList.xlsx')
 
     def GetDb(self):
-        filename = filedialog.askopenfilename()
-        db = pd.read_excel(filename)
-        self.item_text = filename.split('/')[-1].split('_')[0]
-        self.text.run('파일 이름 : {}'.format(filename.split('/')[-1]))
+        self.filename = filedialog.askopenfilename()
+        db = pd.read_excel(self.filename)
+        self.item_text = self.filename.split('/')[-1].split('_')[0]
+        self.text.run('파일 이름 : {}'.format(self.filename.split('/')[-1]))
 
         return db
 
     # 알리 크롤링 함수
     def StartCrawl(self):
         self.text.run('--Start work--')
-        self.text.run('PGM ver : v24012804')
+        self.text.run('PGM ver : v24031807')
         self.start_time = self.text.GetTime()
         root = tkinter.Tk()
         root.withdraw()
@@ -274,8 +277,9 @@ class MyWindow(QMainWindow, form_class):
         self.cnt = 0
         self.sku_id = []
         self.arrange = 0
-        self.product_main_css = ''
-        self.new_format = False
+        self.product_main_css = '#root'
+        self.new_format = True
+        self.today = datetime.datetime.now()
 
         if self.discount_per_limit.text() != "":
             try:
@@ -394,15 +398,39 @@ class MyWindow(QMainWindow, form_class):
             self.driver.refresh()
             time.sleep(self.process_delay)
         
-        if self.link_parse == True:
-            self.detail_db = self.GetDb()
-            max_cnt = len(self.detail_db.iloc[:, 13])
-            idx = 0
-            for url in self.detail_db.iloc[:, 13]:
-                self.driver.get(url)
-                self.search_url = url
-                self.CrawlDataFromFile(max_cnt, idx + 1)
-                idx += 1
+        if self.link_parse == True or self.extra == 7:
+            if self.extra == 7:
+                file_list = filedialog.askopenfilenames()
+                for file in file_list:
+                    self.wb_all = openpyxl.Workbook()
+                    self.sheet_all = self.wb_all.active
+                    self.sheet_all.append(self.columns)
+                    self.wb_few = openpyxl.Workbook()
+                    self.sheet_few = self.wb_few.active
+                    self.sheet_few.append(self.columns)
+
+                    self.filename = file
+                    self.detail_db = pd.read_excel(file)
+                    self.item_text = file.split('/')[-1].split('_')[0].split('.')[0]
+                    self.text.run('파일 이름 : {}'.format(file.split('/')[-1]))
+                    max_cnt = len(self.detail_db.iloc[:, 13])
+                    idx = 0
+                    self.final_cnt = 0
+                    for url in self.detail_db.iloc[:, 13]:
+                        self.driver.get(url)
+                        self.search_url = url
+                        self.CrawlDataFromFile(max_cnt, idx + 1)
+                        idx += 1
+            else:
+                self.detail_db = self.GetDb()
+                max_cnt = len(self.detail_db.iloc[:, 13])
+                idx = 0
+                for url in self.detail_db.iloc[:, 13]:
+                    self.driver.get(url)
+                    self.search_url = url
+                    self.CrawlDataFromFile(max_cnt, idx + 1)
+                    idx += 1
+
             return Result.PASS
 
         if self.restart == False:
@@ -666,7 +694,6 @@ class MyWindow(QMainWindow, form_class):
         return Result.PASS
 
     def CrawlData(self):
-        self.today = datetime.datetime.now()
         if self.cnt == 100:
             self.text.run('{}페이지 {}번째가 마지막 상품입니다.'.format(self.i + 1, self.j + 1))
             self.text.run('크롤링이 완료되었습니다.')
@@ -1572,7 +1599,7 @@ class MyWindow(QMainWindow, form_class):
             price_final = self.price
         self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url, 
                            select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
-        self.SaveFile()
+        self.SaveFile(self.wb)
         self.CloseItemPage()
 
         if (self.extra == 0 or self.extra == 1):
@@ -1856,6 +1883,8 @@ class MyWindow(QMainWindow, form_class):
                                     return Result.FAIL, 0
 
         try:
+            if '-' in time:
+                time = time.split('-')[1].replace(' ', '')
             time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
         except:
             try:
@@ -1863,21 +1892,25 @@ class MyWindow(QMainWindow, form_class):
                 time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
             except:
                 try:
-                    temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
-                    time = temp.split(' 배송 예정 ')[0].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                    time = temp.split('예상 배송일')[1].split('-')[1].replace(' ', '')
                     time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
                 except:
                     try:
                         temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
-                        time = temp.split('배송일: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                        time = temp.split(' 배송 예정 ')[0].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
                         time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
                     except:
                         try:
-                            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                            temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(4)').text
                             time = temp.split('배송일: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
                             time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
                         except:
-                            return Result.FAIL, 0
+                            try:
+                                temp = self.driver.find_element(By.CSS_SELECTOR, '#root > div > div.pdp-body.pdp-wrap > div > div.pdp-body-top-right > div > div > div.shipping--wrap--Dhb61O7 > div > div.shipping--content--xEqXBXk > div > div:nth-child(3)').text
+                                time = temp.split('배송일: ')[1].split('에서')[0].split(' - ')[0].replace(' ', '').split(',')[0]
+                                time_str = datetime.datetime.strptime('{}{}{}'.format(self.today.year, time.split('월')[0], time.split('월')[1].replace('일', '')), '%Y%m%d')
+                            except:
+                                return Result.FAIL, 0
         try:
             eta = time_str - self.today
         except:
@@ -2506,23 +2539,25 @@ class MyWindow(QMainWindow, form_class):
                         if pre_product_main == product_main:
                             time.sleep(0.5)
                             product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root')))[0].get_attribute('innerHTML')
-                        
                         try:
-                            limit = product_main.split(' 개 사용 가능')[0].split('</div><div><span class="">')[1].split(' 개')[0].split(' lots')[0]
+                            limit = product_main.split('comet-v2-input-number-input')[1].split('value="')[1].split('">')[0]
                         except:
                             try:
-                                limit = product_main.split(' 개 사용 가능')[0].split('<div><span class="">')[1].split(' 개')[0]
+                                limit = product_main.split(' 개 사용 가능')[0].split('</div><div><span class="">')[1].split(' 개')[0].split(' lots')[0]
                             except:
                                 try:
-                                    limit = product_main.split('개만 남았습니다')[0].split('quantity--limit--jIdRcwT">')[1]
+                                    limit = product_main.split(' 개 사용 가능')[0].split('<div><span class="">')[1].split(' 개')[0]
                                 except:
                                     try:
-                                        limit = product_main.split('lots 사용 가능')[0].split('quantity--limit--jIdRcwT">')[1]
+                                        limit = product_main.split('개만 남았습니다')[0].split('quantity--limit--jIdRcwT">')[1]
                                     except:
                                         try:
-                                            limit = product_main.split('고객 당 최대 ')[1].split('</div')[0]
+                                            limit = product_main.split('lots 사용 가능')[0].split('quantity--limit--jIdRcwT">')[1]
                                         except:
-                                            limit = ''
+                                            try:
+                                                limit = product_main.split('고객 당 최대 ')[1].split('</div')[0]
+                                            except:
+                                                limit = ''
                                     
                         if '0' == limit:
                             self.text.run('{}페이지 {}-{}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1, j + 1))
@@ -2565,7 +2600,7 @@ class MyWindow(QMainWindow, form_class):
                         except:
                             pass
 
-                        option1_total.append(option1_list[i].split(';')[0] + ' + ' + option2_list[j].split(';')[0] + '/' + str(prices[j]))
+                        option1_total.append(option1_list[i].split(';')[0] + ' + ' + option2_list[j].split(';')[0] + '/' + str(prices[j - soldout_cnt]))
                         if j != 0 and pre_price != price and pre_price != '':
                             self.text.run('옵션2에 따라 가격 변동이 있는 상품입니다. 다음 아이템으로 넘어갑니다.')
                             self.no_crawl = True
@@ -2583,23 +2618,25 @@ class MyWindow(QMainWindow, form_class):
                     if pre_product_main == product_main:
                         time.sleep(0.5)
                         product_main = WebDriverWait(self.driver, 3).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#root')))[0].get_attribute('innerHTML')
-                    
                     try:
-                        limit = product_main.split(' 개 사용 가능')[0].split('</div><div><span class="">')[1].split(' 개')[0].split(' lots')[0]
+                        limit = product_main.split('comet-v2-input-number-input')[1].split('value="')[1].split('">')[0]
                     except:
                         try:
-                            limit = product_main.split(' 개 사용 가능')[0].split('<div><span class="">')[1].split(' 개')[0]
+                            limit = product_main.split(' 개 사용 가능')[0].split('</div><div><span class="">')[1].split(' 개')[0].split(' lots')[0]
                         except:
                             try:
-                                limit = product_main.split('개만 남았습니다')[0].split('quantity--limit--jIdRcwT">')[1]
+                                limit = product_main.split(' 개 사용 가능')[0].split('<div><span class="">')[1].split(' 개')[0]
                             except:
                                 try:
-                                    limit = product_main.split('lots 사용 가능')[0].split('quantity--limit--jIdRcwT">')[1]
+                                    limit = product_main.split('개만 남았습니다')[0].split('quantity--limit--jIdRcwT">')[1]
                                 except:
                                     try:
-                                        limit = product_main.split('고객 당 최대 ')[1].split('</div')[0]
+                                        limit = product_main.split('lots 사용 가능')[0].split('quantity--limit--jIdRcwT">')[1]
                                     except:
-                                        limit = ''
+                                        try:
+                                            limit = product_main.split('고객 당 최대 ')[1].split('</div')[0]
+                                        except:
+                                            limit = ''
                     if '0' == limit:
                         self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
                         soldout_cnt += 1
@@ -2651,7 +2688,7 @@ class MyWindow(QMainWindow, form_class):
                     except:
                         pass
 
-                    option1_total.append(option1_list[i].split(';')[0] + '/' + str(prices[i]))
+                    option1_total.append(option1_list[i].split(';')[0] + '/' + str(prices[i - soldout_cnt]))
             except:
                 self.text.run('{}페이지 {}-{}이 품절되었습니다.'.format(self.i + 1, self.j + 1, i + 1))
                 soldout_cnt += 1
@@ -2683,6 +2720,14 @@ class MyWindow(QMainWindow, form_class):
             option2_list = []
             prices = []
         
+        if  self.extra == 7 and soldout_cnt > 0:
+            if soldout_cnt == loop_len_opt1 * loop_len_opt2:
+                self.all_soldout = True
+                self.few_soldout = False
+            else:
+                self.all_soldout = False
+                self.few_soldout = True
+
         option1_temp = []
         option2_temp = []
         price_final = []
@@ -2776,9 +2821,12 @@ class MyWindow(QMainWindow, form_class):
         text_rmv = re.sub('[-=+,#/\?:^.@*\"※~ㆍ!』‘|\(\)\[\]`\'…》\”\“\’·]', ' ', inputString)
         return text_rmv
 
-    def SaveFile(self, postfix = ''):
+    def SaveFile(self, wb, path = '', postfix = ''):
         ret = Result.PASS
-        file_folder = '{}\\Desktop\\알리익스프레스_결과물'.format(self.windows_user_name)
+        if path != '':
+            file_folder = path
+        else:
+            file_folder = '{}\\Desktop\\알리익스프레스_결과물'.format(self.windows_user_name)
         filename = '{}\\{}'.format(file_folder, self.item_text + '_AliExpress_ItemName_results{}.xlsx'.format(postfix))
         try:
             if not os.path.isdir(file_folder):
@@ -2787,7 +2835,7 @@ class MyWindow(QMainWindow, form_class):
             self.text.run('파일 폴더를 생성하는데 실패했습니다.')
             return Result.FAIL
 
-        self.wb.save(filename)
+        wb.save(filename)
         #self.tb_temp.to_excel(filename, index=False)
         return ret
 
@@ -2843,8 +2891,15 @@ class MyWindow(QMainWindow, form_class):
             self.item_text = self.item_name.text()
 
     def CrawlDataFromFile(self, max_cnt, item_cnt):
+        self.all_soldout = False
+        self.few_soldout = False
+
         self.no_crawl = False
         self.other_page = False
+        if self.extra == 7:
+            path = '/'.join(self.filename.split('.xlsx')[0].split('/')[0:-1])
+        else:
+            path = ''
 
         # 알리익스프레스 검색 선택링크주소
         last_tab = self.driver.window_handles[-1]
@@ -2866,6 +2921,14 @@ class MyWindow(QMainWindow, form_class):
 
         try:
             self.product_main = WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.product_main_css)))[0].get_attribute('innerHTML')
+            if '연령인증' in self.product_main or 'This product requires age verification' in self.product_main:
+                self.text.run('{}번째 상품은 연령인증이 필요한 상품입니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
+                self.CloseItemPage()
+
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
+
+                return Result.FAIL
         except:
             if (self.extra == 0 or self.extra == 1):
                 try:
@@ -2873,46 +2936,9 @@ class MyWindow(QMainWindow, form_class):
                     if '연령인증' in verify_age:
                         self.text.run('{}번째 상품은 연령인증이 필요한 상품입니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
                         self.CloseItemPage()
-                        if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                            if (self.i + 1) == self.page_max_num:
-                                self.final_cnt += 1
-                                if (self.extra == 0 or self.extra == 1):
-                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                                self.text.run('마지막 아이템입니다.')
-                                self.text.run('크롤링이 완료되었습니다.')
-                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                                # 크롬드라이버 종료
-                                self.end_time = self.text.GetTime()
-                                diff_time = self.end_time - self.start_time
-                                self.text.run('--End work--')
-                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                                self.restart = True
-
-                                return Result.PASS
-                            elif (self.i + 1) == self.max_page:
-                                self.final_cnt += 1
-                                if (self.extra == 0 or self.extra == 1):
-                                    self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                                self.text.run('마지막 아이템입니다.')
-                                self.text.run('크롤링이 완료되었습니다.')
-                                self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                                # 크롬드라이버 종료
-                                self.end_time = self.text.GetTime()
-                                diff_time = self.end_time - self.start_time
-                                self.text.run('--End work--')
-                                self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                                self.restart = True
-
-                                return Result.PASS
-                            else:
-                                self.ClickNextPage()
-
-                                self.j = 0
-                                self.i += 1
-                                time.sleep(self.process_delay)
-                        else:
-                            self.j += 1
-                            self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
+                    
+                        self.j += 1
+                        self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
 
                         return Result.FAIL
                 except:
@@ -2929,51 +2955,39 @@ class MyWindow(QMainWindow, form_class):
                 time.sleep(1)
                 return Result.PASS
 
+        # check if page not found
+        try:
+            page_not_found = self.product_main.find('죄송합니다. 찾으시는 페이지가 없습니다.')
+            if page_not_found != -1:
+                self.text.run('{}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
+                self.CloseItemPage()
+                self.title = 'Page not found'
+                self.sku = self.GetSkuId()
+
+                self.sheet_all.append([self.item_text, '', '', '', '', '', '', '','', '', '', '', self.search_url,
+                    select_url, '', self.title, '', '', '', '', '', self.sku])
+                self.SaveFile(self.wb_all, path, '_전체품절')
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
+                
+                return Result.FAIL
+        except:
+            pass
+
         # check if its not sale
         try:
             is_sale = self.product_main.split('message--wrap--TCbfZuF')[1].split('</div')[0].replace('>', '').replace('"','')
             if '더 이상 사용할 수 없습니다' in is_sale:
                 self.text.run('{}번째 상품은 현재 판매되지 않는 상품입니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
                 self.CloseItemPage()
-                if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    if (self.i + 1) == self.page_max_num:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
+                self.title = self.GetTitle()
+                self.sku = self.GetSkuId()
 
-                        return Result.PASS
-                    elif (self.i + 1) == self.max_page:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
-
-                        return Result.PASS
-                    else:
-                        self.ClickNextPage()
-                        self.j = 0
-                        self.i += 1
-                        time.sleep(self.process_delay)
-                else:
-                    self.j += 1
-                    self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
+                self.sheet_all.append([self.item_text, '', '', '', '', '', '', '','', '', '', '', self.search_url,
+                    select_url, '', self.title, '', '', '', '', '', self.sku])
+                self.SaveFile(self.wb_all, path, '_전체품절')
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
                 
                 return Result.FAIL
         except:
@@ -2983,48 +2997,17 @@ class MyWindow(QMainWindow, form_class):
         try:
             is_delivery = self.product_main.find('이 상품은 고객님의 배송지로 배송이 불가능합니다.')
             if is_delivery != -1:
-                self.text.run('{}페이지 {}번째 상품은 국내로 배송이 불가능합니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.text.run('{}번째 상품은 국내로 배송이 불가능합니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
                 self.CloseItemPage()
-                if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    if (self.i + 1) == self.page_max_num:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
+                self.title = self.GetTitle()
+                self.sku = self.GetSkuId()
 
-                        return Result.PASS
-                    elif (self.i + 1) == self.max_page:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
+                self.sheet_all.append([self.item_text, '', '', '', '', '', '', '','', '', '', '', self.search_url,
+                    select_url, '', self.title, '', '', '', '', '', self.sku])
+                self.SaveFile(self.wb_all, path, '_전체품절')
 
-                        return Result.PASS
-                    else:
-                        self.ClickNextPage()
-
-                        self.j = 0
-                        self.i += 1
-                        time.sleep(self.process_delay)
-                else:
-                    self.j += 1
-                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
                 
                 return Result.FAIL
         except:
@@ -3074,7 +3057,10 @@ class MyWindow(QMainWindow, form_class):
                     WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#nav-description > div:nth-child(2) > button')))[0].click()
                 except:
                     time.sleep(1)
-                    WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#nav-description > div:nth-child(2) > button')))[0].click()
+                    try:
+                        WebDriverWait(self.driver, 5).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '#nav-description > div:nth-child(2) > button')))[0].click()
+                    except:
+                        pass
                 time.sleep(0.5)
                 ret = self.ScrollPageDown()
             if ret == Result.FAIL:
@@ -3124,7 +3110,7 @@ class MyWindow(QMainWindow, form_class):
                                self.detail_db.iloc[19, item_cnt - 1],
                                self.detail_db.iloc[20, item_cnt - 1]],
                                self.detail_db.iloc[21, item_cnt - 1])
-            self.SaveFile('_reproduction')
+            self.SaveFile(self.wb, path, '_reproduction')
 
             self.final_cnt += 1
             self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
@@ -3162,94 +3148,22 @@ class MyWindow(QMainWindow, form_class):
             # 배송비/배송방법
             ret, self.delivery_for, self.delivery_fee = self.GetDeliveryInfo()
             if ret == Result.FAIL:
-                self.text.run('{}페이지 {}번째 아이템의 배송정보 획득에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.text.run('{}번째 아이템의 배송정보 획득에 실패했습니다. 다음 아이템으로 넘어갑니다.'.format(item_cnt))
                 self.CloseItemPage()
-                if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    if (self.i + 1) == self.page_max_num:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
 
-                        return Result.PASS
-                    elif (self.i + 1) == self.max_page:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
-
-                        return Result.PASS
-                    else:
-                        self.ClickNextPage()
-                        self.j = 0
-                        self.i += 1
-                        time.sleep(self.process_delay)
-                else:
-                    self.j += 1
-                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
 
                 return Result.FAIL
 
             # 예상 배송일
             ret, self.eta = self.GetEta()
             if ret == Result.FAIL:
-                self.text.run('{}페이지 {}번째 아이템의 예상 배송일을 가져올 수 없습니다. 다음으로 넘어갑니다.'.format(self.i + 1, self.j + 1))
+                self.text.run('{}번째 아이템의 예상 배송일을 가져올 수 없습니다. 다음으로 넘어갑니다.'.format(item_cnt))
                 self.CloseItemPage()
-                if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    if (self.i + 1) == self.page_max_num:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
 
-                        return Result.PASS
-                    elif (self.i + 1) == self.max_page:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
-
-                        return Result.PASS
-                    else:
-                        self.ClickNextPage()
-                        self.j = 0
-                        self.i += 1
-                        time.sleep(self.process_delay)
-                else:
-                    self.j += 1
-                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
+                self.j += 1
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
 
                 return Result.FAIL
 
@@ -3257,45 +3171,15 @@ class MyWindow(QMainWindow, form_class):
             self.sku = self.GetSkuId()
             if self.no_crawl == True:
                 self.CloseItemPage()
-                if self.j == 59 and (self.extra == 0 or self.extra == 1):
-                    if (self.i + 1) == self.page_max_num:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
+                self.title = self.GetTitle()
+                self.sku = self.GetSkuId()
 
-                        return Result.PASS
-                    elif (self.i + 1) == self.max_page:
-                        self.final_cnt += 1
-                        if (self.extra == 0 or self.extra == 1):
-                            self.text.run('{}페이지 {}번째 아이템 크롤링 중'.format(self.i + 1, self.j + 1))
-                        self.text.run('마지막 아이템입니다.')
-                        self.text.run('크롤링이 완료되었습니다.')
-                        self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                        # 크롬드라이버 종료
-                        self.end_time = self.text.GetTime()
-                        diff_time = self.end_time - self.start_time
-                        self.text.run('--End work--')
-                        self.text.run('총 소요시간은 {}초 입니다.'.format(diff_time.seconds))
-                        self.restart = True
-
-                        return Result.PASS
-                    else:
-                        self.ClickNextPage()
-                        self.j = 0
-                        self.i += 1
-                        time.sleep(self.process_delay)
-                else:
-                    self.text.run('{}개 중 {}개 수집 완료'.format(self.cnt_page * 60, self.final_cnt))
-                    self.j += 1
+                self.sheet_all.append([self.item_text, '', '', '', '', '', '', '','', '', '', '', self.search_url,
+                    select_url, '', self.title, '', '', '', '', '', self.sku])
+                self.SaveFile(self.wb_all, path, '_전체품절')
+                
+                self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
+                self.j += 1
                 return Result.FAIL
 
             # 상세 페이지
@@ -3313,7 +3197,6 @@ class MyWindow(QMainWindow, form_class):
             else:
                 option1_total, option1_list, option2_list, prices = self.GetOption1()
             if self.no_crawl == True:
-                self.CloseItemPage()
                 self.text.run('{}개 중 {}개 수집 완료'.format(max_cnt, self.final_cnt))
                 if self.final_cnt == max_cnt or item_cnt == max_cnt:
                     self.final_cnt += 1
@@ -3342,9 +3225,19 @@ class MyWindow(QMainWindow, form_class):
                 price_final = '{}-{}'.format(min(prices), max(prices))
             else:
                 price_final = self.price
-            self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url,
+            
+            if self.all_soldout == True:
+                self.sheet_all.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url,
                     select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
-            self.SaveFile('_reproduction')
+                self.SaveFile(self.wb_all, path, '_전체품절')
+            elif self.few_soldout == True:
+                self.sheet_few.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url,
+                    select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
+                self.SaveFile(self.wb_few, path, '_부분품절')
+            else:
+                self.sheet.append([self.item_text, self.price_ori, self.price, self.review, self.sold_cnt, '', self.eta, '','', self.video_link, self.delivery_for, self.delivery_fee, self.search_url,
+                    select_url, price_final, self.title, self.img_url, option1_list, option2_list, option1_total, self.detail_imgs, self.sku])
+                self.SaveFile(self.wb, path, '_reproduction')
             self.CloseItemPage()
 
             if self.final_cnt == max_cnt or item_cnt == max_cnt:

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>635</width>
-    <height>780</height>
+    <height>657</height>
    </rect>
   </property>
   <property name="font">
@@ -17,7 +17,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>AliExpress Web crawller v24012804</string>
+   <string>AliExpress Web crawller v24031807</string>
   </property>
   <property name="toolTipDuration">
    <number>-2</number>
@@ -289,6 +289,13 @@
         <widget class="QRadioButton" name="recom_radio">
          <property name="text">
           <string>추천 수집</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QRadioButton" name="soldout_radio">
+         <property name="text">
+          <string>품절데이터 수집</string>
          </property>
         </widget>
        </item>
